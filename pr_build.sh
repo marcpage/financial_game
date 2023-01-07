@@ -14,7 +14,6 @@ export REQUIREMENTS_PATH=requirements.txt
 export FLAKE8_FLAGS=--max-line-length=100
 export COVERAGE_FLAGS="--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
 
-export SQLALCHEMY_WARN_20=1
 
 #####################################
 #
