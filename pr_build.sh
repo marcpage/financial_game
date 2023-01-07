@@ -12,6 +12,7 @@ export SOURCES="$SOURCE_DIR/*.py"
 export VENV_DIR=.venv
 export REQUIREMENTS_PATH=requirements.txt
 export FLAKE8_FLAGS=--max-line-length=100
+export COVERAGE_FLAGS=--show-missing --skip-covered --skip-empty
 
 
 #####################################
@@ -106,7 +107,8 @@ $LOG_ECHO "##[group] Running python unit tests"
 $LOG_ECHO "##[command]python3 -m coverage run --source=$SOURCE_DIR -m pytest"
 python3 -m coverage run --source=$SOURCE_DIR -m pytest
 export TEST_STATUS=$?
-python3 -m coverage report
+$LOG_ECHO "##[command]python3 -m coverage report $COVERAGE_FLAGS"
+python3 -m coverage report $COVERAGE_FLAGS
 $LOG_ECHO "##[endgroup]"
 if [ $TEST_STATUS -ne 0 ]; then
     echo $ERROR_PREFIX"💥💥 Please fix the above test failures and resubmit 💥💥 "
