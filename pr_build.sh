@@ -35,11 +35,17 @@ fi
 #
 #####################################
 
+$LOG_ECHO "##[group] Installing dependencies"
 mkdir -p $VENV_DIR
+$LOG_ECHO "##[command]python3 -m venv $VENV_DIR"
 python3 -m venv $VENV_DIR
+$LOG_ECHO "##[command]. $VENV_DIR/bin/activate"
 . $VENV_DIR/bin/activate
-pip3 install --upgrade pip
-pip3 install -qr $REQUIREMENTS_PATH
+$LOG_ECHO "##[command]pip3 install --quiet --upgrade pip"
+pip3 install --quiet --upgrade pip
+$LOG_ECHO "##[command]pip3 install --quiet --requirement $REQUIREMENTS_PATH"
+pip3 install --quiet --requirement $REQUIREMENTS_PATH
+$LOG_ECHO "##[endgroup]"
 
 
 #####################################
