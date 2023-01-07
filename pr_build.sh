@@ -12,7 +12,7 @@ export SOURCES="$SOURCE_DIR/*.py"
 export VENV_DIR=.venv
 export REQUIREMENTS_PATH=requirements.txt
 export FLAKE8_FLAGS=--max-line-length=100
-export COVERAGE_FLAGS=--show-missing --skip-covered --skip-empty
+export COVERAGE_FLAGS="--show-missing --skip-covered --skip-empty"
 
 
 #####################################
