@@ -1,0 +1,7 @@
+Flask==2.2.2
+black==22.12.0
+flake8==6.0.0
+pylint==2.15.9
+SQLAlchemy==1.4.46
+pytest==7.2.0
+coverage==7.0.3
