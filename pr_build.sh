@@ -9,7 +9,6 @@
 
 export SOURCE_DIR=financial_game
 export SOURCES="$SOURCE_DIR/*.py"
-export APP_MAIN_SCRIPT=$SOURCE_DIR/__main__.py
 export VENV_DIR=.venv
 export REQUIREMENTS_PATH=requirements.txt
 export FLAKE8_FLAGS=--max-line-length=100
@@ -104,8 +103,8 @@ fi
 #####################################
 
 $LOG_ECHO "##[group] Running python unit tests"
-$LOG_ECHO "##[command]python3 -m coverage run -m pytest"
-python3 -m coverage run -m pytest
+$LOG_ECHO "##[command]python3 -m coverage run --source=$SOURCE_DIR -m pytest"
+python3 -m coverage run --source=$SOURCE_DIR -m pytest
 export TEST_STATUS=$?
 python3 -m coverage report
 $LOG_ECHO "##[endgroup]"
@@ -122,7 +121,7 @@ fi
 #
 #####################################
 
-if [ "$1" = "run" ]; then python3 $APP_MAIN_SCRIPT --test; fi
+if [ "$1" = "run" ]; then python3 -m $SOURCE_DIR --test; fi
 
 
 #####################################
