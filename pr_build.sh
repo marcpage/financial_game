@@ -102,7 +102,7 @@ $LOG_ECHO "##[group] Running flake8 python source validation"
 $LOG_ECHO "##[command]flake8 $FLAKE8_FLAGS $SOURCES"
 flake8  --output-file $FLAKE8_OUTPUT $FLAKE8_FLAGS $SOURCES
 export FLAKE8_STATUS=$?
-cat $PYLINT_OUTPUT | sed 's/^\(.*:.*:.*:\)/'$ERROR_PREFIX'\1/'
+cat $FLAKE8_OUTPUT | sed 's/^\(.*:.*:.*:\)/'$ERROR_PREFIX'\1/'
 $LOG_ECHO "##[endgroup]"
 if [ $FLAKE8_STATUS -ne 0 ]; then
     echo $ERROR_PREFIX"💥💥 Please fix the above flake8 errors and resubmit 💥💥 "
