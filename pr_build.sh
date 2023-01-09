@@ -124,15 +124,24 @@ $LOG_ECHO "##[group] Running python unit tests"
 $LOG_ECHO "##[command]python3 -m coverage run --source=$SOURCE_DIR -m pytest"
 python3 -m coverage run --source=$SOURCE_DIR -m pytest
 export TEST_STATUS=$?
-$LOG_ECHO "##[command]python3 -m coverage report --fail-under=$MINIMUM_TEST_COVERAGE $COVERAGE_FLAGS"
-python3 -m coverage report --fail-under=$MINIMUM_TEST_COVERAGE $COVERAGE_FLAGS
-export COVERAGE_STATUS=$?
 $LOG_ECHO "##[endgroup]"
 if [ $TEST_STATUS -ne 0 ]; then
     echo $ERROR_PREFIX"💥💥 Please fix the above test failures and resubmit 💥💥 "
 else
     echo "✅ unit tests passed"
 fi
+
+#####################################
+#
+#  Evaluate Python unit test coverage
+#
+#####################################
+
+$LOG_ECHO "##[group] Checking python unit test coverage"
+$LOG_ECHO "##[command]python3 -m coverage report --fail-under=$MINIMUM_TEST_COVERAGE $COVERAGE_FLAGS"
+python3 -m coverage report --fail-under=$MINIMUM_TEST_COVERAGE $COVERAGE_FLAGS
+export COVERAGE_STATUS=$?
+$LOG_ECHO "##[endgroup]"
 if [ $COVERAGE_STATUS -ne 0 ]; then
     echo $ERROR_PREFIX"💥💥 Please bring test coverage to $MINIMUM_TEST_COVERAGE% and resubmit 💥💥 "
 else
