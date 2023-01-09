@@ -13,7 +13,10 @@ export VENV_DIR=.venv
 export REQUIREMENTS_PATH=requirements.txt
 export FLAKE8_FLAGS=--max-line-length=100
 export COVERAGE_FLAGS="--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
+export OBJECTS_DIR=objects
+export PYLINT_OUTPUT=$OBJECTS_DIR/pylint_output.txt
 
+mkdir -p $OBJECTS_DIR
 
 #####################################
 #
@@ -24,6 +27,7 @@ export COVERAGE_FLAGS="--show-missing --skip-covered --skip-empty --omit=financi
 if [ "$GITHUB_WORKFLOW" = "CI" ]; then
     export LOG_ECHO=echo
     export ERROR_PREFIX="##[error]"
+    export WARNING_PREFIX="##[warning]"
 else
     export LOG_ECHO=true
 fi
@@ -75,8 +79,9 @@ fi
 
 $LOG_ECHO "##[group] Running pylint python source validation"
 $LOG_ECHO "##[command]pylint $SOURCES"
-pylint $SOURCES
+pylint --output $PYLINT_OUTPUT $SOURCES
 export PYLINT_STATUS=$?
+cat $PYLINT_OUTPUT | sed 's/^\(.*:.*:.*:\)/'$ERROR_PREFIX'\1/'
 $LOG_ECHO "##[endgroup]"
 if [ $PYLINT_STATUS -ne 0 ]; then
     echo $ERROR_PREFIX"💥💥 Please fix the above pylint errors and resubmit 💥💥 "
