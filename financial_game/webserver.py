@@ -3,7 +3,7 @@
 """ scheduling restaurant staff
 """
 
-import time
+
 from flask import Flask
 
 
