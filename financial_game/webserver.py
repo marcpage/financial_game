@@ -3,12 +3,12 @@
 """ scheduling restaurant staff
 """
 
+import time
 
 from flask import Flask
 
 
 def create_app():
-    # pylint: disable=R0914,R0915
     """create the flask app"""
     app = Flask(__name__)
 
