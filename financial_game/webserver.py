@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
 
-""" scheduling restaurant staff
-"""
-
 
 from flask import Flask
 
