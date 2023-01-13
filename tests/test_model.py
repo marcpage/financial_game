@@ -13,6 +13,7 @@ def test_user():
         db.create_user("Jane.Doe@apple.com", "too many secrets", "Jane")
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
+        assert db.count_users() == 2, "users = {db.count_users()}"
         db.flush()
         db.close()
 
@@ -20,6 +21,7 @@ def test_user():
 
         john = db.find_user("john.appleseed@apple.com")
         john_id = john.id
+        assert db.count_users() == 2, "users = {db.count_users()}"
         assert john.name == "John"
         assert john.password_matches("Setec astronomy")
         assert not john.password_matches("setec astronomy")
@@ -42,6 +44,7 @@ def test_user():
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
         john = db.get_user(john_id)
+        assert db.count_users() == 2, "users = {db.count_users()}"
         assert john.name == "John"
         assert john.password_matches("setec astronomy")
         assert not john.password_matches("Setec astronomy")
@@ -55,6 +58,7 @@ def test_user():
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
         users = db.get_users()
+        assert db.count_users() == 2, "users = {db.count_users()}"
         assert len(users) == 2
         user_names = [u.name for u in users]
         assert 'John' in user_names
