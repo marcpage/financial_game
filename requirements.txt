@@ -6,3 +6,4 @@ SQLAlchemy==1.4.46
 pytest==7.2.0
 coverage==7.0.3
 typing-extensions
+Mako==1.2.4
