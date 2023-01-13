@@ -9,7 +9,8 @@ import financial_game.webserver
 
 def main():
     """main entrypoint"""
-    app = financial_game.webserver.create_app()
+    database = financial_game.model.Database("sqlite:///objects/test.sqlite3")
+    app = financial_game.webserver.create_app(database)
     app.run(host="0.0.0.0", debug=True, port=8000)
 
 

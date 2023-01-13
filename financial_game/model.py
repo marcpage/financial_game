@@ -130,3 +130,7 @@ class Database:
     def get_users(self):
         """Get list of all users"""
         return self.__session().query(User).all()
+
+    def count_users(self):
+        """Count total users"""
+        return self.__session().query(sqlalchemy.func.count(User.id)).one_or_none()[0]
