@@ -8,7 +8,7 @@ def test_root():
     app.config.update({"TESTING": True})
     client = app.test_client()
     response = client.get("/")
-    assert b'welcome' in response.data.lower(), response.data
+    assert b'the real-life financial game' in response.data.lower(), response.data
 
 
 def test_404():

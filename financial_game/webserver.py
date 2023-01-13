@@ -6,6 +6,8 @@
 
 from flask import Flask
 
+import financial_game.template
+
 
 def create_app():
     """create the flask app"""
@@ -16,7 +18,8 @@ def create_app():
     @app.route("/")
     def home():
         """default location for the server, home"""
-        return "<html><body>Welcome</body></html>", 200
+        contents = financial_game.template.render("templates/home.html.mako")
+        return contents, 200
 
     # Mark: errors
 
