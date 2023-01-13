@@ -1,5 +1,6 @@
 # temporary files
 bin/
+objects/
 
 # macOS hidden files
 .DS_Store
