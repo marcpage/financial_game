@@ -92,6 +92,8 @@ def test_serialize():
         jane = db.find_user("jane.doe@apple.com")
         assert jane.name == "Jane"
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
+        assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
+
         db.flush()
         db.close()
 
