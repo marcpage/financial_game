@@ -29,7 +29,9 @@ class User(Alchemy_Base):
     email = sqlalchemy.Column(sqlalchemy.String(50))
     password_hash = sqlalchemy.Column(sqlalchemy.String(64))
     sponsor_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("user.id"))
-    sponsor = sqlalchemy.orm.relationship("User")
+    sponsored = sqlalchemy.orm.relationship(
+        "User", backref=sqlalchemy.orm.backref("sponsor", remote_side=[id])
+    )
 
     @staticmethod
     def hash_password(text):

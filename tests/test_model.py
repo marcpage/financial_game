@@ -42,6 +42,10 @@ def test_user():
         assert not jane.password_matches("Setec astronomy")
         assert not jane.password_matches("too many Secrets")
         assert '"Jane"' in repr(jane)
+        assert jane.sponsor.id == john.id
+        assert len(jane.sponsored) == 0
+        assert len(john.sponsored) == 1
+        assert john.sponsored[0].id == jane.id
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
         db.flush()
@@ -58,6 +62,10 @@ def test_user():
         jane = db.get_user(jane_id)
         assert jane.name == "Jane"
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
+        assert jane.sponsor.id == john.id
+        assert len(jane.sponsored) == 0
+        assert len(john.sponsored) == 1
+        assert john.sponsored[0].id == jane.id
         db.flush()
         db.close()
 
@@ -97,6 +105,10 @@ def test_serialize():
         assert jane.name == "Jane"
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
         assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
+        assert jane.sponsor.id == john.id
+        assert len(jane.sponsored) == 0
+        assert len(john.sponsored) == 1
+        assert john.sponsored[0].id == jane.id
 
         db.flush()
         db.close()
