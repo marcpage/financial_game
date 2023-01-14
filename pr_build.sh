@@ -9,6 +9,11 @@
 
 export MINIMUM_TEST_COVERAGE=100
 export SOURCE_DIR=financial_game
+export RUN_DATABASE=objects/test.sqlite3
+export RUN_PORT=8000
+export RUN_DEBUG=--debug
+export RUN_RESET_SCRIPT=initial_db.yaml
+export RUN_ARGS="--port $RUN_PORT --db $RUN_DATABASE $RUN_DEBUG --reset $RUN_RESET_SCRIPT"
 export SOURCES="$SOURCE_DIR/*.py"
 export VENV_DIR=.venv
 export REQUIREMENTS_PATH=requirements.txt
@@ -155,7 +160,7 @@ fi
 #
 #####################################
 
-if [ "$1" = "run" ]; then python3 -m $SOURCE_DIR --test; fi
+if [ "$1" = "run" ]; then python3 -m $SOURCE_DIR $RUN_ARGS; fi
 
 
 #####################################

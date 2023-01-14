@@ -1,0 +1,11 @@
+users:
+    1:
+        name: John
+        email: john.appleseed@apple.com
+        password: Setec astronomy
+        sponsor_id: null
+    2:
+        name: Jane
+        email: Jane.Doe@apple.com
+        password: too many secrets
+        sponsor_id: 1
