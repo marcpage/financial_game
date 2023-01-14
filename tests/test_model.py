@@ -9,8 +9,9 @@ def test_user():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        db.create_user("john.appleseed@apple.com", "Setec astronomy", "John")
-        db.create_user("Jane.Doe@apple.com", "too many secrets", "Jane")
+        john = db.create_user("john.appleseed@apple.com", "Setec astronomy", "John", None, return_created=True)
+        assert john.id is not None
+        db.create_user("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
         assert db.count_users() == 2, "users = {db.count_users()}"
@@ -32,6 +33,7 @@ def test_user():
         jane = db.find_user("jane.doe@apple.com")
         jane_id = jane.id
         assert jane.name == "Jane"
+        assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
         assert jane.password_matches("too many secrets")
         assert not jane.password_matches("Setec astronomy")
         assert not jane.password_matches("too many Secrets")
@@ -65,5 +67,44 @@ def test_user():
         assert 'Jane' in user_names
 
 
+def test_serialize():
+    with tempfile.TemporaryDirectory() as workspace:
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        john = db.create_user("john.appleseed@apple.com", "Setec astronomy", "John", None, return_created=True)
+        assert john.id is not None
+        db.create_user("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+
+        assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
+        assert db.count_users() == 2, "users = {db.count_users()}"
+        db.flush()
+        serialized = db.serialize()
+        db.close()
+
+        db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3", serialized)
+
+        john = db.find_user("john.appleseed@apple.com")
+        assert db.count_users() == 2, "users = {db.count_users()}"
+        assert john.name == "John"
+        assert not john.password_matches("setec astronomy")
+        assert john.password_matches("Setec astronomy")
+
+        jane = db.find_user("jane.doe@apple.com")
+        assert jane.name == "Jane"
+        assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
+        db.flush()
+        db.close()
+
+        db = financial_game.model.Database("sqlite:///" + workspace + "test3.sqlite3", serialized)
+
+        users = db.get_users()
+        assert db.count_users() == 2, "users = {db.count_users()}"
+        assert len(users) == 2
+        user_names = [u.name for u in users]
+        assert 'John' in user_names
+        assert 'Jane' in user_names
+
+
 if __name__ == "__main__":
     test_user()
+    test_serialize()
