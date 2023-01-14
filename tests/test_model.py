@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 import tempfile
+import os
 
 import financial_game.model
+
+
+TEST_YAML_PATH = os.path.join(os.path.split(__file__)[0], "model.yaml")
 
 
 def test_user():
@@ -97,7 +101,7 @@ def test_serialize():
         db.flush()
         db.close()
 
-        db = financial_game.model.Database("sqlite:///" + workspace + "test3.sqlite3", serialized)
+        db = financial_game.model.Database("sqlite:///" + workspace + "test3.sqlite3", TEST_YAML_PATH)
 
         users = db.get_users()
         assert db.count_users() == 2, "users = {db.count_users()}"

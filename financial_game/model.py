@@ -10,6 +10,8 @@ import hashlib
 import sqlalchemy
 import sqlalchemy.ext.declarative
 
+import yaml
+
 
 Alchemy_Base = sqlalchemy.ext.declarative.declarative_base()
 
@@ -56,7 +58,10 @@ class Database:
     """stored information"""
 
     def __init__(self, db_url, serialized=None):
-        """create db"""
+        """create db
+        db_url - a SqlAlchemy URL for the database
+        serialized - optional dictionary or path to yaml file
+        """
         self.__db_url = db_url
         self.__sessions = {}
         self.__session_lock = threading.Lock()
@@ -66,7 +71,14 @@ class Database:
         self.__session_creator = sqlalchemy.orm.scoped_session(self.__factory)
 
         if serialized is not None:
-            self.__deserialize(serialized)
+            try:
+                with open(serialized, "r", encoding="utf-8") as script_file:
+                    serialized_data = yaml.safe_load(script_file.read())
+
+            except TypeError:
+                serialized_data = serialized
+
+            self.__deserialize(serialized_data)
 
     def __deserialize(self, serialized):
         assert len(serialized) == 1
@@ -91,11 +103,11 @@ class Database:
             sponsor_id = None if sponsor_email is None else created[sponsor_email].id
             created[user["email"]] = self.create_user(
                 user["email"],
-                user["password_hash"],
+                user.get("password_hash", user.get("password", None)),
                 user["name"],
                 sponsor_id,
                 return_created=True,
-                password_is_hashed=True,
+                password_is_hashed="password_hash" in user,
             )
 
     def __session(self):
@@ -165,6 +177,7 @@ class Database:
         """create a new employee entry"""
         found = self.find_user(email)
         assert not found, f"We already have that email: {found}"
+        assert password is not None
         created = self.__add(
             User(
                 email=email,
