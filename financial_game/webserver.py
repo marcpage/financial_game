@@ -19,9 +19,15 @@ def create_app(database):
     @app.route("/")
     def home(message=None):
         """default location for the server, home"""
-        contents = financial_game.template.render(
-            "templates/home.html.mako", message=message
-        )
+
+        if "user-id" not in flask.request.cookies:
+            contents = financial_game.template.render(
+                "templates/home.html.mako", message=message
+            )
+
+        else:
+            contents = f"<html><body>Welcome {flask.request.cookies.get('user-id')}</body></html>"
+
         return contents, 200
 
     @app.route("/login_failed")
@@ -33,11 +39,18 @@ def create_app(database):
     @app.route("/login", methods=["POST"])
     def login():
         user = database.find_user(flask.request.form["email"])
+        print(f"user = {user}")
 
         if user and user.password_matches(flask.request.form["password"]):
-            return flask.redirect(flask.url_for("home"))
+            response = flask.make_response(flask.redirect(flask.url_for("home")))
+            response.set_cookie("user-id", f"{user.id}")
 
-        return flask.redirect(flask.url_for("invalid_login"))
+        else:
+            response = flask.make_response(
+                flask.redirect(flask.url_for("invalid_login"))
+            )
+
+        return response
 
     # Mark: errors
 
