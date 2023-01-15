@@ -15,7 +15,7 @@ import financial_game.sessionkey
 SECRET = "secret"
 
 
-def create_app(database):
+def create_app(database, args):
     """create the flask app"""
     app = flask.Flask(__name__)
 
@@ -29,7 +29,7 @@ def create_app(database):
             user_id, password_hash = financial_game.sessionkey.parse(
                 flask.request.cookies[financial_game.sessionkey.COOKIE],
                 flask.request.headers,
-                SECRET,
+                args.secret,
             )
             user = database.get_user(user_id)
 
@@ -62,7 +62,7 @@ def create_app(database):
         if user and user.password_matches(flask.request.form["password"]):
             response = flask.make_response(flask.redirect(flask.url_for("home")))
             session_key = financial_game.sessionkey.create(
-                user, flask.request.headers, SECRET
+                user, flask.request.headers, args.secret
             )
             response.set_cookie(financial_game.sessionkey.COOKIE, session_key)
 
