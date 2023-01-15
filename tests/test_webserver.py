@@ -84,9 +84,22 @@ def test_404():
         assert response.status_code == 404, response.status_code
         assert b'not found' in response.data.lower(), response.data
 
+
+def test_logout():
+    with tempfile.TemporaryDirectory() as workspace:
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+        app = financial_game.webserver.create_app(db, ARGS)
+        app.config.update({"TESTING": True})
+        client = app.test_client()
+        response = client.get("/logout", follow_redirects=True)
+        assert response.status_code == 200, response.status_code
+        assert b'the real-life financial game' in response.data.lower(), response.data
+
+
 if __name__ == "__main__":
     test_root()
     test_login_fail()
     test_login_success()
     test_bad_session_password()
     test_404()
+    test_logout()

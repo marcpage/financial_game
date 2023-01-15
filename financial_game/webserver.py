@@ -11,8 +11,20 @@ import financial_game.model
 import financial_game.sessionkey
 
 
-# TODO: Get session key secret from settings file  # pylint: disable=fixme
-SECRET = "secret"
+def get_user(request, args, database):
+    """Determines the user (or None) that is requesting the page"""
+    if financial_game.sessionkey.COOKIE in request.cookies:
+        user_id, password_hash = financial_game.sessionkey.parse(
+            request.cookies[financial_game.sessionkey.COOKIE],
+            request.headers,
+            args.secret,
+        )
+        user = database.get_user(user_id)
+
+        if user is not None and user.password_hash == password_hash:
+            return user
+
+    return None
 
 
 def create_app(database, args):
@@ -24,20 +36,7 @@ def create_app(database, args):
     @app.route("/")
     def home(message=None):
         """default location for the server, home"""
-
-        if financial_game.sessionkey.COOKIE in flask.request.cookies:
-            user_id, password_hash = financial_game.sessionkey.parse(
-                flask.request.cookies[financial_game.sessionkey.COOKIE],
-                flask.request.headers,
-                args.secret,
-            )
-            user = database.get_user(user_id)
-
-            if user is not None and user.password_hash != password_hash:
-                user = None
-
-        else:
-            user = None
+        user = get_user(flask.request, args, database)
 
         if user is None:
             contents = financial_game.template.render(
@@ -45,7 +44,11 @@ def create_app(database, args):
             )
 
         else:
-            contents = f"<html><body>Welcome {user.name}</body></html>"
+            contents = (
+                "<html><body>"
+                + f"Welcome {user.name}"
+                + "<p><a href='/logout'>Logout</a></p></body></html>"
+            )
 
         return contents, 200
 
@@ -54,6 +57,12 @@ def create_app(database, args):
         return home(message="Invalid Login")
 
     # Mark: API
+
+    @app.route("/logout")
+    def logout():
+        response = flask.make_response(flask.redirect(flask.url_for("home")))
+        response.set_cookie(financial_game.sessionkey.COOKIE, "", expires=0)
+        return response
 
     @app.route("/login", methods=["POST"])
     def login():
