@@ -5,6 +5,7 @@
 
 
 import os
+import platform
 
 import yaml
 
@@ -13,14 +14,19 @@ DEFAULT_DATABASE = "objects/test.sqlite3"
 DEFAULT_WEB_PORT = 8000
 
 # TODO: Get the correct path on each platform (dict)  # pylint: disable=fixme
-DEFAULT_SETTINGS = os.path.join(
-    os.environ["HOME"], "Library", "Preferences", "financial_game.yaml"
-)
+PLATFORM = platform.system()
+DEFAULT_SETTINGS = {
+    "Darwin": os.path.join(
+        os.environ.get("HOME", ""), "Library", "Preferences", "financial_game.yaml"
+    ),
+    "Linux": os.path.join(os.environ.get("HOME", ""), ".financial_game.yaml"),
+    "Windows": os.path.join(os.environ.get("LOCALAPPDATA", ""), "financial_game.yaml"),
+}
 
 
 def default_path():
     """Get the default path for the settings file"""
-    return DEFAULT_SETTINGS
+    return DEFAULT_SETTINGS[PLATFORM]
 
 
 def load(args):
