@@ -25,9 +25,11 @@ def create_app(database):
     def home(message=None):
         """default location for the server, home"""
 
-        if "user-id" in flask.request.cookies:
+        if financial_game.sessionkey.COOKIE in flask.request.cookies:
             user_id, password_hash = financial_game.sessionkey.parse(
-                flask.request.cookies["user-id"], flask.request.headers, SECRET
+                flask.request.cookies[financial_game.sessionkey.COOKIE],
+                flask.request.headers,
+                SECRET,
             )
             user = database.get_user(user_id)
 
@@ -62,7 +64,7 @@ def create_app(database):
             session_key = financial_game.sessionkey.create(
                 user, flask.request.headers, SECRET
             )
-            response.set_cookie("user-id", session_key)
+            response.set_cookie(financial_game.sessionkey.COOKIE, session_key)
 
         else:
             response = flask.make_response(

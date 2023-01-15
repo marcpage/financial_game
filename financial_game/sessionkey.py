@@ -12,6 +12,9 @@ from Crypto.Cipher import AES
 from Crypto import Random
 
 
+COOKIE = "user-id"  # name of the cookie that contains the session key
+
+
 def create(user, headers, secret, hour_delta=0):
     """Creates a session key given the headers and a secret"""
     now = datetime.datetime.now()
