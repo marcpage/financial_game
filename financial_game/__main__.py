@@ -4,16 +4,18 @@
     Main entrypoint to the game
 """
 
+##############################################################
+#                                                              #
+#  This file is not tested. Code should be minimal and simple  #
+#                                                              #
+##############################################################
 
 import argparse
 import os
 import sys
 
 import financial_game.webserver
-
-
-DEFAULT_DATABASE = "objects/test.sqlite3"
-DEFAULT_WEB_PORT = 8000
+import financial_game.settings
 
 
 def parse_command_line():
@@ -24,16 +26,28 @@ def parse_command_line():
         "--port",
         dest="port",
         type=int,
-        default=DEFAULT_WEB_PORT,
-        help="The port the web server listens on",
+        help=f"The port the web server listens on ({financial_game.settings.DEFAULT_WEB_PORT})",
     )
     parser.add_argument(
         "-d",
         "--db",
         dest="database",
         type=str,
-        default=DEFAULT_DATABASE,
-        help="SqlAlchemy URL for the database or path to Sqlite3 database",
+        help="SqlAlchemy URL for the database or path to Sqlite3 database "
+        + f"({financial_game.settings.DEFAULT_DATABASE})",
+    )
+    parser.add_argument(
+        "--settings",
+        dest="settings",
+        type=str,
+        help="SqlAlchemy URL for the database or path to Sqlite3 database "
+        + f"({financial_game.settings.default_path()})",
+    )
+    parser.add_argument(
+        "--secret",
+        dest="secret",
+        type=str,
+        help="The secret phrase used to encrypt session tokens",
     )
     parser.add_argument(
         "--debug", dest="debug", action="store_true", help="Should we be debugging"
@@ -45,7 +59,12 @@ def parse_command_line():
         help="Path to a yaml script to (re)initialize the database "
         + "(only valid if db is a file path or db is empty)",
     )
-    args = parser.parse_args()
+    args = financial_game.settings.load(parser.parse_args())
+
+    if args.secret is None:
+        parser.print_help()
+        print(f"You must either specify --secret or set secret in {args.settings}")
+        sys.exit(1)
 
     if "://" not in args.database:
 
@@ -67,7 +86,7 @@ def main():
     """main entrypoint"""
     args = parse_command_line()
     database = financial_game.model.Database(args.database, serialized=args.reset)
-    app = financial_game.webserver.create_app(database)
+    app = financial_game.webserver.create_app(database, args)
     app.run(host="0.0.0.0", debug=args.debug, port=args.port)
 
 
