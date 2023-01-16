@@ -79,7 +79,9 @@ def send(
         session.starttls()
 
     if args.email_password is not None:
-        session.login(args.email_user, args.email_password)
+        # TODO: Add support for encrypted password in args   # pylint: disable=fixme
+        username = args.email_from if args.email_user is None else args.email_user
+        session.login(username, args.email_password)
 
     session.sendmail(args.email_from, recipient, body)
     session.quit()

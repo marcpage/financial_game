@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
-
 import asyncio
 import types
 import queue
 import threading
+import ssl
 
 from aiosmtpd.controller import Controller
+from aiosmtpd.smtp import AuthResult
 
 import financial_game.email
 
@@ -24,8 +25,12 @@ class EchoHandler:
         return '250 Message accepted for delivery'
 
 
-def start_server(email_queue, port=8025, address="localhost"):
-    controller = Controller(EchoHandler(email_queue), address, port)
+def authenticator(server, session, envelope, mechanism, auth_data):
+    return AuthResult(success=True)
+
+
+def start_server(email_queue, context, port=8025, address="localhost"):
+    controller = Controller(EchoHandler(email_queue), address, port, auth_require_tls=False, authenticator=authenticator, tls_context=context)
     controller.start()
     return controller
 
@@ -48,14 +53,16 @@ def test_form_email_html_simple():
 
 def test_send_email():
     email_queue = queue.Queue()
-    smtp_server = start_server(email_queue)
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain('tests/localhost_cert.pem', 'tests/localhost_key.pem')
+    smtp_server = start_server(email_queue, context)
     args = types.SimpleNamespace(
         email_from="Marc Page <Marc@ResolveToExcel.com>",
         smtp_server="localhost",
         email_port=smtp_server.port,
-        email_user=None,
-        email_password=None,
-        smtp_tls=False,
+        email_user="user",
+        email_password="password",
+        smtp_tls=True,
     )
     recipient = "Marc Page <MarcAllenPage@gmail.com>"
     financial_game.email.send(args, recipient, "Testing Text", html_body="Here it is\n<b>html</b> body", text_body="Here it is\ntext body", encoding="us-ascii")
@@ -70,7 +77,6 @@ def test_send_email():
         smtp_server.stop()
 
     assert message is not None
-    print(message)
 
 
 if __name__ == "__main__":
