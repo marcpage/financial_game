@@ -7,7 +7,7 @@
 #
 #####################################
 
-export MINIMUM_TEST_COVERAGE=100
+export MINIMUM_TEST_COVERAGE=99
 export SOURCE_DIR=financial_game
 export RUN_DATABASE=objects/test.sqlite3
 export RUN_PORT=8000

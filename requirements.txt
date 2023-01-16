@@ -9,3 +9,4 @@ typing-extensions
 Mako==1.2.4
 PyYAML==6.0
 pycryptodome==3.16.0
+aiosmtpd==1.4.3
