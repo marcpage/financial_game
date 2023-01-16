@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-    Thoughts on testing tls:
-    https://stackoverflow.com/questions/45447491/how-do-i-properly-support-starttls-with-aiosmtpd
-"""
-
 import asyncio
 import types
 import queue
