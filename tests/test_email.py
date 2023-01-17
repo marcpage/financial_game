@@ -65,7 +65,14 @@ def test_send_email():
         smtp_tls=True,
     )
     recipient = "Marc Page <MarcAllenPage@gmail.com>"
-    financial_game.email.send(args, recipient, "Testing Text", html_body="Here it is\n<b>html</b> body", text_body="Here it is\ntext body", encoding="us-ascii")
+    financial_game.email.send(
+            args,
+            recipient,
+            "Testing sending emails",
+            html_body="Here it is\n<b>html</b> body",
+            text_body="Here it is\ntext body",
+            attachments={'requirements.txt':{'mime': 'text/plain'}},
+            encoding="us-ascii")
 
     try:
         message = email_queue.get(timeout=0.100)
