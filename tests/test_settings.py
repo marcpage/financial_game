@@ -20,7 +20,13 @@ def test_basics():
             secret='secret',
             debug=True,
             settings=financial_game.settings.default_path(),
-            reset="reset_file.yaml"
+            reset="reset_file.yaml",
+            smtp_port=None,
+            smtp_server=None,
+            smtp_tls=None,
+            smtp_user=None,
+            smtp_password=None,
+            email_from=None,
         ))
         assert not os.path.isfile(financial_game.settings.default_path())
         assert args.port == 80, args.port
@@ -43,7 +49,13 @@ def test_no_secrets():
             secret=None,
             debug=True,
             settings=financial_game.settings.default_path(),
-            reset="reset_file.yaml"
+            reset="reset_file.yaml",
+            smtp_port=None,
+            smtp_server=None,
+            smtp_tls=None,
+            smtp_user=None,
+            smtp_password=None,
+            email_from=None,
         ))
         assert os.path.isfile(financial_game.settings.default_path())
         assert args.port == 80, args.port
@@ -66,7 +78,13 @@ def test_override():
             secret=None,
             debug=False,
             settings=None,
-            reset="reset_file.yaml"
+            reset="reset_file.yaml",
+            smtp_port=None,
+            smtp_server=None,
+            smtp_tls=None,
+            smtp_user=None,
+            smtp_password=None,
+            email_from=None,
         ))
         assert args.secret is None, args.secret
         assert os.path.isfile(financial_game.settings.default_path())
@@ -77,7 +95,13 @@ def test_override():
             secret=None,
             debug=True,
             settings=None,
-            reset="reset_file_release.yaml"
+            reset="reset_file_release.yaml",
+            smtp_port=None,
+            smtp_server=None,
+            smtp_tls=None,
+            smtp_user=None,
+            smtp_password=None,
+            email_from=None,
         ))
         assert args.port == 800, args.port
         assert args.database == "objects/testing_some_more.sqlite3", args.database

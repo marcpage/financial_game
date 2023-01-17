@@ -59,9 +59,9 @@ def test_send_email():
     args = types.SimpleNamespace(
         email_from="Marc Page <Marc@ResolveToExcel.com>",
         smtp_server="localhost",
-        email_port=smtp_server.port,
-        email_user="user",
-        email_password="password",
+        smtp_port=smtp_server.port,
+        smtp_user="user",
+        smtp_password="password",
         smtp_tls=True,
     )
     recipient = "Marc Page <MarcAllenPage@gmail.com>"

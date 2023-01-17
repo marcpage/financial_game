@@ -137,18 +137,24 @@ def send(
     body = form(
         args, recipient, subject, html_body, text_body, attachments, inlined, encoding
     )
-    session = smtplib.SMTP(args.smtp_server, args.email_port)
-
+    print("=" * 80 + "\n" + body + "\n" + "=" * 80)
+    session = smtplib.SMTP(args.smtp_server, args.smtp_port)
+    print("session started")
     if args.smtp_tls:
         session.starttls()
+        print("tls started")
 
-    if args.email_password is not None:
+    if args.smtp_password is not None:
         # TODO: Add support for encrypted password in args   # pylint: disable=fixme
-        username = args.email_from if args.email_user is None else args.email_user
-        session.login(username, args.email_password)
+        username = args.email_from if args.smtp_user is None else args.smtp_user
+        session.login(username, args.smtp_password)
+        print("logged in")
 
+    print("sending email")
     session.sendmail(args.email_from, recipient, body)
+    print("mail sent")
     session.quit()
+    print("quit")
 
 
 # pylint: disable=pointless-string-statement
