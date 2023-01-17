@@ -7,9 +7,9 @@
 
     - https://www.geeksforgeeks.org/send-mail-gmail-account-using-python/
     - https://geekflare.com/send-gmail-in-python/
-    - https://stackoverflow.com/questions/3902455/mail-multipart-alternative-vs-multipart-mixed
+    - https://stackoverflow.com/questions/3902455
     - https://www.tutorialspoint.com/send-mail-with-attachment-from-your-gmail-account-using-python  # noqa: E501
-    - https://stackoverflow.com/questions/920910/sending-multipart-html-emails-which-contain-embedded-images  # noqa: E501
+    - https://stackoverflow.com/questions/920910
 
 """
 
@@ -18,6 +18,30 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.header import Header
+from email.mime.base import MIMEBase
+from email import encoders
+
+
+def add_attachments(message, attachments):
+    """Attach files to an email message"""
+    for filename in [] if attachments is None else attachments:
+        contents = attachments[filename].get("contents", None)
+
+        if contents is None:
+            with open(
+                attachments[filename].get("path", filename), "rb"
+            ) as content_file:
+                contents = content_file.read()
+
+        mime_type = attachments[filename].get("mime", "application/octet-stream")
+        assert (
+            mime_type.count("/") == 1
+        ), f"bad mime_type: '{mime_type}' for {filename}'"
+        payload = MIMEBase(*mime_type.split("/"))
+        payload.set_payload(contents)
+        encoders.encode_base64(payload)
+        payload.add_header("Content-Decomposition", "attachment", filename=filename)
+        message.attach(payload)
 
 
 # pylint: disable=too-many-arguments,unused-argument
@@ -31,7 +55,15 @@ def form(
     inlined=None,
     encoding="utf-8",
 ):
-    """Formats an email to be sent"""
+    """Formats an email to be sent
+    attachments - {
+                    <filename>: {
+                        'path': path to file (optional),
+                        'contents': binary contents of the file (optional),
+                        'mime': mime type (optional defaults to application/octet-stream),
+                        }
+                    }
+    """
     assert html_body is not None or text_body is not None
     message = MIMEMultipart("mixed")
 
@@ -54,7 +86,7 @@ def form(
         related.attach(MIMEText(html_body, "html", encoding))
         # TODO: add inlined images   # pylint: disable=fixme
 
-    # TODO: add attachments   # pylint: disable=fixme
+    add_attachments(message, attachments)
     return message.as_string()
 
 
@@ -90,8 +122,6 @@ def send(
 # pylint: disable=pointless-string-statement
 """
 
-from email.mime.base import MIMEBase
-from email import encoders
 
 m = MIMEText(s, 'plain', 'utf-8')
 m['Subject'] = Header(s, 'utf-8')
