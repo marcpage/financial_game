@@ -72,6 +72,7 @@ def test_send_email():
             html_body="Here it is\n<b>html</b> body",
             text_body="Here it is\ntext body",
             attachments={'requirements.txt':{'mime': 'text/plain'}},
+            inlined={'image1': 'tests/sign-check-icon.png'},
             encoding="us-ascii")
 
     try:

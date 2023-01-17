@@ -15,8 +15,10 @@
 
 
 import smtplib
+import os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from email.mime.image import MIMEImage
 from email.header import Header
 from email.mime.base import MIMEBase
 from email import encoders
@@ -24,7 +26,7 @@ from email import encoders
 
 def add_attachments(message, attachments):
     """Attach files to an email message"""
-    for filename in [] if attachments is None else attachments:
+    for filename in {} if attachments is None else attachments:
         contents = attachments[filename].get("contents", None)
 
         if contents is None:
@@ -42,6 +44,22 @@ def add_attachments(message, attachments):
         encoders.encode_base64(payload)
         payload.add_header("Content-Decomposition", "attachment", filename=filename)
         message.attach(payload)
+
+
+def add_inlined_images(related, inlined):
+    """adds inlined images to a message"""
+    for image_id in {} if inlined is None else inlined:
+        image_path = inlined[image_id]
+
+        with open(image_path, "rb") as image_file:
+            contents = image_file.read()
+
+        inline_image = MIMEImage(contents)
+        inline_image.add_header("Content-ID", image_id)
+        inline_image.add_header(
+            "Content-Disposition", "inline", filename=os.path.split(image_path)[1]
+        )
+        related.attach(inline_image)
 
 
 # pylint: disable=too-many-arguments,unused-argument
@@ -63,6 +81,11 @@ def form(
                         'mime': mime type (optional defaults to application/octet-stream),
                         }
                     }
+    inlined - {
+        <image_id>: <image_path>
+    }
+        To get inlined images to show up in your html:
+            <img src="cid:<image_id>"
     """
     assert html_body is not None or text_body is not None
     message = MIMEMultipart("mixed")
@@ -70,6 +93,9 @@ def form(
     message["From"] = args.email_from
     message["To"] = recipient
     message["Subject"] = Header(subject, encoding)
+
+    if html_body is not None:
+        message.preamble = "This is a multi-part message in MIME format."
 
     body = (
         message
@@ -84,7 +110,13 @@ def form(
 
     if html_body is not None:
         related.attach(MIMEText(html_body, "html", encoding))
-        # TODO: add inlined images   # pylint: disable=fixme
+        add_inlined_images(related, inlined)
+
+    if related is not body:
+        body.attach(related)
+
+    if body is not message:
+        message.attach(body)
 
     add_attachments(message, attachments)
     return message.as_string()
@@ -121,10 +153,6 @@ def send(
 
 # pylint: disable=pointless-string-statement
 """
-
-
-m = MIMEText(s, 'plain', 'utf-8')
-m['Subject'] = Header(s, 'utf-8')
 
 
 # Send an HTML email with an embedded image and a plain text message for
@@ -173,6 +201,14 @@ smtp.connect('smtp.example.com')
 smtp.login('exampleuser', 'examplepass')
 smtp.sendmail(strFrom, strTo, msgRoot.as_string())
 smtp.quit()
+
+
+from email.mime.base import MIMEBase
+from email import encoders
+
+m = MIMEText(s, 'plain', 'utf-8')
+m['Subject'] = Header(s, 'utf-8')
+
 
 
 attach_file_name = 'TP_python_prev.pdf'
