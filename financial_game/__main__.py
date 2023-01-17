@@ -40,7 +40,7 @@ def parse_command_line():
         "--settings",
         dest="settings",
         type=str,
-        help="SqlAlchemy URL for the database or path to Sqlite3 database "
+        help="Path to the settings file to use "
         + f"({financial_game.settings.default_path()})",
     )
     parser.add_argument(
@@ -58,6 +58,38 @@ def parse_command_line():
         type=str,
         help="Path to a yaml script to (re)initialize the database "
         + "(only valid if db is a file path or db is empty)",
+    )
+    parser.add_argument(
+        "--smtp-port",
+        dest="smtp_port",
+        default=587,
+        type=int,
+        help=f"The smtp port ({financial_game.settings.DEFAULT_SMTP_PORT})",
+    )
+    parser.add_argument(
+        "--smtp-server",
+        dest="smtp_server",
+        type=str,
+        default="smtp.gmail.com",
+        help=f"SMTP server ({financial_game.settings.DEFAULT_SMTP_SERVER})",
+    )
+    parser.add_argument(
+        "--smtp-user",
+        dest="smtp_user",
+        type=str,
+        help="SMTP log in username",
+    )
+    parser.add_argument(
+        "--smtp-password",
+        dest="smtp_password",
+        type=str,
+        help="SMTP log in password",
+    )
+    parser.add_argument(
+        "--tls",
+        dest="smtp_tls",
+        action="store_true",
+        help="Should we use TLS",
     )
     args = financial_game.settings.load(parser.parse_args())
 
