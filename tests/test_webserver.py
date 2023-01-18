@@ -67,7 +67,7 @@ def test_bad_session_password():
         user = types.SimpleNamespace(id=1, password_hash=hashlib.sha256("password".encode()).hexdigest())
         headers = {'User-Agent': 'Chrome'}
         bad_session = financial_game.sessionkey.create(user, headers, ARGS.secret)
-        client.set_cookie('localhost', financial_game.sessionkey.COOKIE, bad_session)
+        client.set_cookie('localhost', financial_game.webserver.COOKIE, bad_session)
         response = client.get("/", headers=headers)
         assert response.status_code == 200, response.status_code
         assert b'email' in response.data.lower(), response.data

@@ -11,11 +11,14 @@ import financial_game.model
 import financial_game.sessionkey
 
 
+COOKIE = "user-id"  # name of the cookie that contains the session key
+
+
 def get_user(request, args, database):
     """Determines the user (or None) that is requesting the page"""
-    if financial_game.sessionkey.COOKIE in request.cookies:
+    if COOKIE in request.cookies:
         user_id, password_hash = financial_game.sessionkey.parse(
-            request.cookies[financial_game.sessionkey.COOKIE],
+            request.cookies[COOKIE],
             request.headers,
             args.secret,
         )
@@ -61,7 +64,7 @@ def create_app(database, args):
     @app.route("/logout")
     def logout():
         response = flask.make_response(flask.redirect(flask.url_for("home")))
-        response.set_cookie(financial_game.sessionkey.COOKIE, "", expires=0)
+        response.set_cookie(COOKIE, "", expires=0)
         return response
 
     @app.route("/login", methods=["POST"])
@@ -73,7 +76,7 @@ def create_app(database, args):
             session_key = financial_game.sessionkey.create(
                 user, flask.request.headers, args.secret
             )
-            response.set_cookie(financial_game.sessionkey.COOKIE, session_key)
+            response.set_cookie(COOKIE, session_key)
 
         else:
             response = flask.make_response(
