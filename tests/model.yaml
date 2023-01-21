@@ -9,3 +9,13 @@ users:
         email: Jane.Doe@apple.com
         password: too many secrets
         sponsor_id: 1
+
+banks:
+    1:
+        name: Bank of America
+        type: BANK
+        url: https://www.bankofamerica.com/
+    2:
+        name: Chase
+        type: BANK
+        url: https://www.chase.com/
