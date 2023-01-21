@@ -19,7 +19,6 @@ def test_user():
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
         assert db.count_users() == 2, "users = {db.count_users()}"
-        db.flush()
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
@@ -48,7 +47,6 @@ def test_user():
         assert john.sponsored[0].id == jane.id
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
-        db.flush()
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
@@ -66,7 +64,6 @@ def test_user():
         assert len(jane.sponsored) == 0
         assert len(john.sponsored) == 1
         assert john.sponsored[0].id == jane.id
-        db.flush()
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
@@ -79,6 +76,52 @@ def test_user():
         assert 'Jane' in user_names
 
 
+def test_bank():
+    with tempfile.TemporaryDirectory() as workspace:
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/", return_created=True)
+        boa_id = boa.id
+        assert boa.id is not None, boa
+        assert boa.name == "Bank of America", boa
+        assert boa.url == "https://www.bankofamerica.com/", boa
+        assert boa.type == "BANK", boa
+        assert '"Bank of America"' in repr(boa)
+
+        chase = db.create_bank("Chase", "https://www.chase.com/", return_created=True)
+        chase_id = chase.id
+        assert chase.id is not None, chase
+        assert chase.name == "Chase", chase
+        assert chase.url == "https://www.chase.com/", chase
+        assert chase.type == "BANK", chase
+        assert '"Chase"' in repr(chase)
+
+        db.close()
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        boa = db.get_bank(boa_id)
+        assert boa.id is not None
+        assert boa.name == "Bank of America"
+        assert boa.url == "https://www.bankofamerica.com/"
+        assert boa.type == "BANK"
+
+        chase = db.get_bank(chase_id)
+        assert chase.id is not None
+        assert chase.name == "Chase"
+        assert chase.url == "https://www.chase.com/"
+        assert chase.type == "BANK"
+
+        db.close()
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        banks = db.get_banks()
+        assert set(b.type for b in banks) == {"BANK"}, f"banks = {banks}"
+        assert "Chase" in [b.name for b in banks], f"banks = {banks}"
+        assert "Bank of America" in [b.name for b in banks], f"banks = {banks}"
+        assert "https://www.bankofamerica.com/" in [b.url for b in banks], f"banks = {banks}"
+        assert "https://www.chase.com/" in [b.url for b in banks], f"banks = {banks}"
+
+
 def test_serialize():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
@@ -86,9 +129,12 @@ def test_serialize():
         john = db.create_user("john.appleseed@apple.com", "Setec astronomy", "John", None, return_created=True)
         assert john.id is not None
         db.create_user("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+        boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/", return_created=True)
+        chase = db.create_bank("Chase", "https://www.chase.com/", return_created=True)
 
         assert len(db.sessions()) == 1, f"sessions = {db.sessions()}"
         assert db.count_users() == 2, "users = {db.count_users()}"
+        assert db.count_banks() == 2
         db.flush()
         serialized = db.serialize()
         db.close()
@@ -110,9 +156,31 @@ def test_serialize():
         assert len(john.sponsored) == 1
         assert john.sponsored[0].id == jane.id
 
-        db.flush()
-        db.close()
+        banks = db.get_banks()
+        assert set(b.type for b in banks) == {"BANK"}
+        assert "Chase" in [b.name for b in banks]
+        assert "Bank of America" in [b.name for b in banks]
+        assert "https://www.bankofamerica.com/" in [b.url for b in banks]
+        assert "https://www.chase.com/" in [b.url for b in banks]
+        boa_id = [b.id for b in banks if b.name == "Bank of America"][0]
+        chase_id = [b.id for b in banks if b.name == "Chase"][0]
 
+        db.close()
+        db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3")
+
+        boa = db.get_bank(boa_id)
+        assert boa.id is not None
+        assert boa.name == "Bank of America"
+        assert boa.url == "https://www.bankofamerica.com/"
+        assert boa.type == "BANK"
+
+        chase = db.get_bank(chase_id)
+        assert chase.id is not None
+        assert chase.name == "Chase"
+        assert chase.url == "https://www.chase.com/"
+        assert chase.type == "BANK"
+
+        db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test3.sqlite3", TEST_YAML_PATH)
 
         users = db.get_users()
@@ -125,4 +193,6 @@ def test_serialize():
 
 if __name__ == "__main__":
     test_user()
+    test_bank()
     test_serialize()
+

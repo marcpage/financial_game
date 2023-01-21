@@ -26,7 +26,7 @@ class User(Alchemy_Base):
     __tablename__ = "user"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String(50))
-    email = sqlalchemy.Column(sqlalchemy.String(50))
+    email = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
     password_hash = sqlalchemy.Column(sqlalchemy.String(64))
     sponsor_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("user.id"))
     sponsored = sqlalchemy.orm.relationship(
@@ -56,6 +56,26 @@ class User(Alchemy_Base):
         )
 
 
+class Bank(Alchemy_Base):  # pylint: disable=too-few-public-methods
+    """Represents a bank or category of value
+    name - name of the bank or category
+    type - BANK
+    url - login url
+    """
+
+    __tablename__ = "bank"
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
+    type = sqlalchemy.Column(sqlalchemy.String(4))
+    url = sqlalchemy.Column(sqlalchemy.String(2083))
+
+    def __repr__(self):
+        """display string"""
+        return (
+            f'Bank(id={self.id} name="{self.name}" url="{self.url}" type="{self.type}")'
+        )
+
+
 class Database:
     """stored information"""
 
@@ -82,8 +102,7 @@ class Database:
 
             self.__deserialize(serialized_data)
 
-    def __deserialize(self, serialized):
-        assert len(serialized) == 1
+    def __deserialize_users(self, serialized):
         assert "users" in serialized
         assert self.count_users() == 0, "database already exists, cannot deserialize"
         users = serialized["users"]
@@ -111,6 +130,29 @@ class Database:
                 return_created=True,
                 password_is_hashed="password_hash" in user,
             )
+        return created
+
+    def __deserialize_banks(self, serialized):
+        assert "banks" in serialized
+        assert self.count_banks() == 0, "database already exists, cannot deserialize"
+        banks = serialized["banks"]
+        created = {}
+
+        for bank_id in sorted(banks):
+            bank = banks[bank_id]
+            assert bank["type"] is not None
+            assert bank["name"] is not None
+            assert bank["name"] not in created
+            created[bank["name"]] = self.create_bank(
+                bank["name"], bank["url"], bank["type"], return_created=True
+            )
+
+        return created
+
+    def __deserialize(self, serialized):
+        assert len(serialized) == 2
+        self.__deserialize_users(serialized)
+        self.__deserialize_banks(serialized)
 
     def __session(self):
         thread_id = threading.current_thread().ident
@@ -152,6 +194,7 @@ class Database:
     def serialize(self):
         """Converts the database contents to a dictionary that can be deserialized"""
         users = self.get_users()
+        banks = self.get_banks()
         return {
             "users": {
                 u.id: {
@@ -161,7 +204,15 @@ class Database:
                     "sponsor_id": u.sponsor_id,
                 }
                 for u in users
-            }
+            },
+            "banks": {
+                b.id: {
+                    "name": b.name,
+                    "url": b.url,
+                    "type": b.type,
+                }
+                for b in banks
+            },
         }
 
     # Mark: User API
@@ -177,8 +228,6 @@ class Database:
         password_is_hashed=False,
     ):
         """create a new employee entry"""
-        found = self.find_user(email)
-        assert not found, f"We already have that email: {found}"
         assert password is not None
         created = self.__add(
             User(
@@ -217,3 +266,29 @@ class Database:
     def count_users(self):
         """Count total users"""
         return self.__session().query(sqlalchemy.func.count(User.id)).one_or_none()[0]
+
+    # Mark: Bank API
+
+    def create_bank(self, name, url=None, bank_type="BANK", return_created=False):
+        """Create a new bank"""
+        assert name is not None
+        created = self.__add(
+            Bank(name=name, url=url, type=bank_type), refresh=return_created
+        )
+        return created if return_created else None
+
+    def get_bank(self, bank_id):
+        """Get a bank by its id"""
+        return (
+            self.__session().query(Bank).filter(Bank.id == int(bank_id)).one_or_none()
+            if bank_id is not None
+            else None
+        )
+
+    def get_banks(self, bank_type="BANK"):
+        """Get all the banks of a given type"""
+        return self.__session().query(Bank).filter(Bank.type == bank_type).all()
+
+    def count_banks(self):
+        """Count total banks"""
+        return self.__session().query(sqlalchemy.func.count(Bank.id)).one_or_none()[0]
