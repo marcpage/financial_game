@@ -3,7 +3,6 @@ users:
         name: John
         email: john.appleseed@apple.com
         password: Setec astronomy
-        sponsor_id: null
     2:
         name: Jane
         email: Jane.Doe@apple.com
@@ -15,7 +14,22 @@ banks:
         name: Bank of America
         type: BANK
         url: https://www.bankofamerica.com/
+        account_types:
+            1:
+                name: Advantage Banking
+                type: CHCK
+                url: https://www.bankofamerica.com/checking
+            2:
+                name: Customized Cash Rewards
+                type: CRED
     2:
         name: Chase
         type: BANK
         url: https://www.chase.com/
+        account_types:
+            3:
+                name: Chase Savings
+                type: SAVE
+            4:
+                name: Amazon Rewards
+                type: CRED

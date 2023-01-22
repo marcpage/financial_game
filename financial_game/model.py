@@ -3,6 +3,7 @@
 """ The model of the data
 """
 
+import enum
 import time
 import threading
 import hashlib
@@ -56,24 +57,60 @@ class User(Alchemy_Base):
         )
 
 
+class TypeOfBank(enum.Enum):
+    """Types of Bank objects"""
+
+    BANK = 1  # bank
+
+
 class Bank(Alchemy_Base):  # pylint: disable=too-few-public-methods
     """Represents a bank or category of value
     name - name of the bank or category
-    type - BANK
+    type - TypeOfBank
     url - login url
     """
 
     __tablename__ = "bank"
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
     name = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
-    type = sqlalchemy.Column(sqlalchemy.String(4))
+    type = sqlalchemy.Column(sqlalchemy.Enum(TypeOfBank))
     url = sqlalchemy.Column(sqlalchemy.String(2083))
+    account_types = sqlalchemy.orm.relationship("AccountType", backref="bank")
 
     def __repr__(self):
         """display string"""
         return (
             f'Bank(id={self.id} name="{self.name}" url="{self.url}" type="{self.type}")'
         )
+
+
+class TypeOfAccount(enum.Enum):
+    """Types of AccountType objects"""
+
+    CRED = 1  # Credit Card
+    CHCK = 2  # Checking
+    SAVE = 3  # Savings
+    MONM = 4  # Money Market
+    BROK = 5  # Brokrage account
+
+
+class AccountType(Alchemy_Base):  # pylint: disable=too-few-public-methods
+    """Represents a type of bank account or category of value
+    name - name of the type of account
+    type - TypeOfAccount
+    url - login url
+    """
+
+    __tablename__ = "account_type"
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
+    name = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
+    type = sqlalchemy.Column(sqlalchemy.Enum(TypeOfAccount))
+    url = sqlalchemy.Column(sqlalchemy.String(2083))
+    bank_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("bank.id"))
+
+    def __repr__(self):
+        """display string"""
+        return f'AccountType(id={self.id} name="{self.name}" url="{self.url}")'
 
 
 class Database:
@@ -110,14 +147,11 @@ class Database:
 
         for user_id in sorted(users):
             user = users[user_id]
+            sponsor_id = user.get("sponsor_id", None)
             assert (
-                user["sponsor_id"] is None or user["sponsor_id"] in users
-            ), f"invalid sponsor_id: {user['sponsor_id']}"
-            sponsor_email = (
-                None
-                if user["sponsor_id"] is None
-                else users[user["sponsor_id"]]["email"]
-            )
+                sponsor_id is None or sponsor_id in users
+            ), f"invalid sponsor_id: {sponsor_id}"
+            sponsor_email = None if sponsor_id is None else users[sponsor_id]["email"]
             assert (
                 sponsor_email is None or sponsor_email in created
             ), f"We haven't created {sponsor_email} yet"
@@ -130,24 +164,31 @@ class Database:
                 return_created=True,
                 password_is_hashed="password_hash" in user,
             )
-        return created
 
     def __deserialize_banks(self, serialized):
         assert "banks" in serialized
         assert self.count_banks() == 0, "database already exists, cannot deserialize"
-        banks = serialized["banks"]
-        created = {}
 
-        for bank_id in sorted(banks):
-            bank = banks[bank_id]
+        for bank_id in serialized["banks"]:
+            bank = serialized["banks"][bank_id]
             assert bank["type"] is not None
+            assert bank["type"] in dir(TypeOfBank)
             assert bank["name"] is not None
-            assert bank["name"] not in created
-            created[bank["name"]] = self.create_bank(
-                bank["name"], bank["url"], bank["type"], return_created=True
+            new_bank = self.create_bank(
+                bank["name"], bank.get("url", None), bank["type"], return_created=True
             )
-
-        return created
+            assert new_bank.id is not None
+            for type_id in bank.get("account_types", []):
+                type_info = bank["account_types"][type_id]
+                assert type_info["name"] is not None
+                assert type_info["type"] is not None
+                assert type_info["type"] in dir(TypeOfAccount)
+                self.create_account_type(
+                    new_bank.id,
+                    type_info["name"],
+                    type_info["type"],
+                    url=type_info.get("url", None),
+                )
 
     def __deserialize(self, serialized):
         assert len(serialized) == 2
@@ -209,7 +250,15 @@ class Database:
                 b.id: {
                     "name": b.name,
                     "url": b.url,
-                    "type": b.type,
+                    "type": b.type.name,
+                    "account_types": {
+                        t.id: {
+                            "name": t.name,
+                            "type": t.type.name,
+                            "url": t.url,
+                        }
+                        for t in b.account_types
+                    },
                 }
                 for b in banks
             },
@@ -269,7 +318,9 @@ class Database:
 
     # Mark: Bank API
 
-    def create_bank(self, name, url=None, bank_type="BANK", return_created=False):
+    def create_bank(
+        self, name, url=None, bank_type=TypeOfBank.BANK, return_created=False
+    ):
         """Create a new bank"""
         assert name is not None
         created = self.__add(
@@ -285,10 +336,23 @@ class Database:
             else None
         )
 
-    def get_banks(self, bank_type="BANK"):
+    def get_banks(self, bank_type=TypeOfBank.BANK):
         """Get all the banks of a given type"""
         return self.__session().query(Bank).filter(Bank.type == bank_type).all()
 
     def count_banks(self):
         """Count total banks"""
         return self.__session().query(sqlalchemy.func.count(Bank.id)).one_or_none()[0]
+
+    # Mark: AccountType API
+
+    def create_account_type(
+        self, bank_id, name, account_type, url=None, return_created=False
+    ):
+        """Create a bank account type"""
+        assert name is not None
+        created = self.__add(
+            AccountType(name=name, url=url, bank_id=bank_id, type=account_type),
+            refresh=return_created,
+        )
+        return created if return_created else None
