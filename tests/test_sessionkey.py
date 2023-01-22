@@ -66,7 +66,7 @@ def test_bad_unicode():
     user_agent = "Mozilla/5.0 (Windows; U; Windows NT 5.1; en-GB; rv:1.9.0.3) Gecko/2008092417 Firefox/3.0.3"
     headers = {'User-Agent': user_agent}
     key_data = f"{secret}:{hour_string}:{headers['User-Agent']}"
-    utf8_first_continuation_byte = b'0x80'  # an invalid utf-8 string
+    utf8_first_continuation_byte = b'\x80, \xC0, \xC1, \xF5..\xFF'  # invalid utf-8 string
     bad_session = financial_game.encryption.encrypt(key_data, utf8_first_continuation_byte)
     bad_key = base64.b64encode(bad_session).decode("utf-8")
     user_id, password_hash = financial_game.sessionkey.parse(bad_key, headers, secret)
