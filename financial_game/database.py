@@ -34,7 +34,6 @@ class Sqlite:
             self.__thread == threading.current_thread().ident
         ), f"Thread mismatch {self.__thread} bs {threading.current_thread().ident}"
         cursor = self.__db.cursor()
-        # print(f"{statement} {replacements}")
         cursor.execute(statement, tuple() if replacements is None else replacements)
 
         if commit:
@@ -45,8 +44,6 @@ class Sqlite:
         else:
             results = None
 
-        # print(f"description = {cursor.description}")
-        # print(f"results = {results}")
         labels = (
             [] if cursor.description is None else [c[0] for c in cursor.description]
         )
