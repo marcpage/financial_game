@@ -4,84 +4,41 @@
 """
 
 import enum
-import time
-import threading
 import hashlib
-
-import sqlalchemy
-import sqlalchemy.ext.declarative
 
 import yaml
 
+import financial_game.database
 
-Alchemy_Base = sqlalchemy.ext.declarative.declarative_base()
 
-
-class User(Alchemy_Base):
-    """Represents a user
-    name - First name
-    email - The email to contact the user
-    password_hash - sha256 hash of the user's password
-    """
-
-    __tablename__ = "user"
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String(50))
-    email = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
-    password_hash = sqlalchemy.Column(sqlalchemy.String(64))
-    sponsor_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("user.id"))
-    sponsored = sqlalchemy.orm.relationship(
-        "User", backref=sqlalchemy.orm.backref("sponsor", remote_side=[id])
-    )
-
-    @staticmethod
-    def hash_password(text):
-        """hash utf-8 text"""
-        hasher = hashlib.new("sha256")
-        hasher.update(text.encode("utf-8"))
-        return hasher.hexdigest()
-
-    def set_password(self, password):
-        """Set the user password hash"""
-        self.password_hash = User.hash_password(password)
-
-    def password_matches(self, password):
-        """does this match the password"""
-        return User.hash_password(password) == self.password_hash
-
-    def __repr__(self):
-        """display string"""
-        return (
-            f'User(id={self.id} name="{self.name}" email="{self.email}" '
-            + f'sponsor_id="{self.sponsor_id}" password_hash={self.password_hash})'
-        )
+TABLES = {
+    "user": {
+        "id": "INTEGER PRIMARY KEY",
+        "name": "VARCHAR(50)",
+        "email": "VARCHAR(50) UNIQUE",
+        "password_hash": "VARCHAR(64)",
+        "sponsor_id": "INTEGER",
+    },
+    "bank": {
+        "id": "INTEGER PRIMARY KEY",
+        "name": "VARCHAR(50) UNIQUE",
+        "type": "VARCHAR(4)",  # TypeOfBank
+        "url": "VARCHAR(2083)",
+    },
+    "account_type": {
+        "id": "INTEGER PRIMARY KEY",
+        "name": "VARCHAR(50)",
+        "type": "VARCHAR(4)",  # TypeOfAccount
+        "url": "VARCHAR(2083)",
+        "bank_id": "INTEGER",
+    },
+}
 
 
 class TypeOfBank(enum.Enum):
     """Types of Bank objects"""
 
     BANK = 1  # bank
-
-
-class Bank(Alchemy_Base):  # pylint: disable=too-few-public-methods
-    """Represents a bank or category of value
-    name - name of the bank or category
-    type - TypeOfBank
-    url - login url
-    """
-
-    __tablename__ = "bank"
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
-    type = sqlalchemy.Column(sqlalchemy.Enum(TypeOfBank))
-    url = sqlalchemy.Column(sqlalchemy.String(2083))
-    account_types = sqlalchemy.orm.relationship("AccountType", backref="bank")
-
-    def __repr__(self):
-        """display string"""
-        return (
-            f'Bank(id={self.id} name="{self.name}" url="{self.url}" type="{self.type}")'
-        )
 
 
 class TypeOfAccount(enum.Enum):
@@ -94,40 +51,28 @@ class TypeOfAccount(enum.Enum):
     BROK = 5  # Brokrage account
 
 
-class AccountType(Alchemy_Base):  # pylint: disable=too-few-public-methods
-    """Represents a type of bank account or category of value
-    name - name of the type of account
-    type - TypeOfAccount
-    url - login url
-    """
-
-    __tablename__ = "account_type"
-    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True, autoincrement=True)
-    name = sqlalchemy.Column(sqlalchemy.String(50), unique=True)
-    type = sqlalchemy.Column(sqlalchemy.Enum(TypeOfAccount))
-    url = sqlalchemy.Column(sqlalchemy.String(2083))
-    bank_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey("bank.id"))
-
-    def __repr__(self):
-        """display string"""
-        return f'AccountType(id={self.id} name="{self.name}" url="{self.url}")'
-
-
 class Database:
     """stored information"""
+
+    @staticmethod
+    def hash_password(text):
+        """hash utf-8 text"""
+        hasher = hashlib.new("sha256")
+        hasher.update(text.encode("utf-8"))
+        return hasher.hexdigest()
+
+    @staticmethod
+    def password_matches(user, password):
+        """Verify that the user's password matches the given password"""
+        return Database.hash_password(password) == user.password_hash
 
     def __init__(self, db_url, serialized=None):
         """create db
         db_url - a SqlAlchemy URL for the database
         serialized - optional dictionary or path to yaml file
         """
-        self.__db_url = db_url
-        self.__sessions = {}
-        self.__session_lock = threading.Lock()
-        engine = sqlalchemy.create_engine(self.__db_url)
-        self.__factory = sqlalchemy.orm.sessionmaker(bind=engine)
-        Alchemy_Base.metadata.create_all(engine)
-        self.__session_creator = sqlalchemy.orm.scoped_session(self.__factory)
+        self.__db = financial_game.database.Connection.connect(db_url)
+        self.__db.create_tables(**TABLES)
 
         if serialized is not None:
             try:
@@ -161,7 +106,6 @@ class Database:
                 user.get("password_hash", user.get("password", None)),
                 user["name"],
                 sponsor_id,
-                return_created=True,
                 password_is_hashed="password_hash" in user,
             )
 
@@ -175,7 +119,7 @@ class Database:
             assert bank["type"] in dir(TypeOfBank)
             assert bank["name"] is not None
             new_bank = self.create_bank(
-                bank["name"], bank.get("url", None), bank["type"], return_created=True
+                bank["name"], bank.get("url", None), TypeOfBank[bank["type"]]
             )
             assert new_bank.id is not None
             for type_id in bank.get("account_types", []):
@@ -186,7 +130,7 @@ class Database:
                 self.create_account_type(
                     new_bank.id,
                     type_info["name"],
-                    type_info["type"],
+                    TypeOfAccount[type_info["type"]],
                     url=type_info.get("url", None),
                 )
 
@@ -195,42 +139,9 @@ class Database:
         self.__deserialize_users(serialized)
         self.__deserialize_banks(serialized)
 
-    def __session(self):
-        thread_id = threading.current_thread().ident
-
-        with self.__session_lock:
-            if thread_id not in self.__sessions:
-                self.__sessions[thread_id] = {
-                    "session": self.__session_creator(),
-                    "access": time.time(),
-                }
-            else:
-                self.__sessions[thread_id]["access"] = time.time()
-        return self.__sessions[thread_id]["session"]
-
-    def __add(self, entry, refresh=False):
-        self.__session().add(entry)
-        self.__session().commit()
-
-        if refresh:
-            self.__session().refresh(entry)
-
-        return entry
-
-    def sessions(self):
-        """Return the number seconds since last access of all active sessions"""
-        now = time.time()
-        with self.__session_lock:
-            return [now - s["access"] for s in self.__sessions.values()]
-
-    def flush(self):
-        """flush all changes to the database"""
-        self.__session().commit()
-
     def close(self):
         """close down the connection to the database"""
-        self.__session().commit()
-        self.__session().close()
+        self.__db.close()
 
     def serialize(self):
         """Converts the database contents to a dictionary that can be deserialized"""
@@ -257,7 +168,7 @@ class Database:
                             "type": t.type.name,
                             "url": t.url,
                         }
-                        for t in b.account_types
+                        for t in self.get_bank_account_types(b.id)
                     },
                 }
                 for b in banks
@@ -269,90 +180,142 @@ class Database:
     # pylint: disable=too-many-arguments
     def create_user(
         self,
-        email,
-        password,
-        name,
-        sponsor_id,
-        return_created=False,
+        email: str,
+        password: str,
+        name: str,
+        sponsor_id: int,
         password_is_hashed=False,
     ):
         """create a new employee entry"""
         assert password is not None
-        created = self.__add(
-            User(
-                email=email,
-                password_hash=password
-                if password_is_hashed
-                else User.hash_password(password),
-                name=name,
-                sponsor_id=sponsor_id,
-            ),
-            refresh=return_created,
+        return self.__db.insert(
+            "user",
+            email=email,
+            password_hash=password
+            if password_is_hashed
+            else Database.hash_password(password),
+            name=name,
+            sponsor_id=sponsor_id,
         )
-        return created if return_created else None
 
-    def get_user(self, user_id):
+    def get_user(self, user_id: int):
         """Get a user by its id"""
-        return (
-            self.__session().query(User).filter(User.id == int(user_id)).one_or_none()
-            if user_id is not None
-            else None
+        return self.__db.get_one_or_none(
+            "user", _where_="id = :user_id", user_id=user_id
         )
 
-    def find_user(self, email):
+    def find_user(self, email: str):
         """Get a user by email (case insensitive)"""
-        return (
-            self.__session()
-            .query(User)
-            .filter(sqlalchemy.func.lower(User.email) == sqlalchemy.func.lower(email))
-            .one_or_none()
+        return self.__db.get_one_or_none(
+            "user", _where_="email LIKE :email", email=email
         )
 
     def get_users(self):
         """Get list of all users"""
-        return self.__session().query(User).all()
+        return self.__db.get_all("user")
+
+    def get_user_sponsored(self, user_id: int):
+        """Get the people this person has sponsored"""
+        return self.__db.get_all(
+            "user", _where_="sponsor_id = :user_id", user_id=user_id
+        )
 
     def count_users(self):
         """Count total users"""
-        return self.__session().query(sqlalchemy.func.count(User.id)).one_or_none()[0]
+        return self.__db.get_one_or_none("user", "COUNT(*)", _as_object_=False)[
+            "COUNT(*)"
+        ]
+
+    def change_user_info(self, user_id: int, **_to_update_):
+        """Change information about the user"""
+        self.__db.change(
+            "user", "user_id", _where_="id = :user_id", user_id=user_id, **_to_update_
+        )
 
     # Mark: Bank API
 
+    @staticmethod
+    def __patch_bank(bank):
+        if bank is None:
+            return None
+
+        if isinstance(bank, list):
+            return [Database.__patch_bank(b) for b in bank]
+
+        bank.type = TypeOfBank[bank.type]
+        return bank
+
     def create_bank(
-        self, name, url=None, bank_type=TypeOfBank.BANK, return_created=False
+        self, name: str, url: str = None, bank_type: TypeOfBank = TypeOfBank.BANK
     ):
         """Create a new bank"""
         assert name is not None
-        created = self.__add(
-            Bank(name=name, url=url, type=bank_type), refresh=return_created
+        return Database.__patch_bank(
+            self.__db.insert("bank", name=name, url=url, type=bank_type.name)
         )
-        return created if return_created else None
 
-    def get_bank(self, bank_id):
+    def get_bank(self, bank_id: int):
         """Get a bank by its id"""
-        return (
-            self.__session().query(Bank).filter(Bank.id == int(bank_id)).one_or_none()
-            if bank_id is not None
-            else None
+        return Database.__patch_bank(
+            self.__db.get_one_or_none("bank", _where_="id = :bank_id", bank_id=bank_id)
         )
 
-    def get_banks(self, bank_type=TypeOfBank.BANK):
+    def get_banks(self, bank_type: TypeOfBank = TypeOfBank.BANK):
         """Get all the banks of a given type"""
-        return self.__session().query(Bank).filter(Bank.type == bank_type).all()
+        return Database.__patch_bank(
+            self.__db.get_all(
+                "bank", _where_="type = :bank_type", bank_type=bank_type.name
+            )
+        )
 
     def count_banks(self):
         """Count total banks"""
-        return self.__session().query(sqlalchemy.func.count(Bank.id)).one_or_none()[0]
+        return self.__db.get_one_or_none("bank", "COUNT(*)", _as_object_=False)[
+            "COUNT(*)"
+        ]
+
+    def get_bank_account_types(self, bank_id: int):
+        """Get the types of accounts associated with a bank"""
+        return Database.__patch_account_type(
+            self.__db.get_all(
+                "account_type", _where_="bank_id = :bank_id", bank_id=bank_id
+            )
+        )
 
     # Mark: AccountType API
 
+    @staticmethod
+    def __patch_account_type(account_type):
+        if account_type is None:
+            return None
+
+        if isinstance(account_type, list):
+            return [Database.__patch_account_type(a) for a in account_type]
+
+        account_type.type = TypeOfAccount[account_type.type]
+        return account_type
+
     def create_account_type(
-        self, bank_id, name, account_type, url=None, return_created=False
+        self, bank_id: int, name: str, account_type: TypeOfAccount, url: str = None
     ):
         """Create a bank account type"""
         assert name is not None
-        created = self.__add(
-            AccountType(name=name, url=url, bank_id=bank_id, type=account_type),
-            refresh=return_created,
+        return Database.__patch_account_type(
+            self.__db.insert(
+                "account_type",
+                name=name,
+                url=url,
+                bank_id=bank_id,
+                type=account_type.name,
+            )
         )
-        return created if return_created else None
+
+    def get_account_type(self, account_type_id: int):
+        """Get a account type by its id"""
+        return Database.__patch_account_type(
+            self.__db.get_one_or_none(
+                "account_type",
+                _where_="id = :account_type_id",
+                account_type_id=account_type_id,
+            )
+        )
