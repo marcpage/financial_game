@@ -9,6 +9,7 @@ import flask
 import financial_game.template
 import financial_game.model
 import financial_game.sessionkey
+from financial_game.model import Database
 
 
 COOKIE = "user-id"  # name of the cookie that contains the session key
@@ -71,7 +72,7 @@ def create_app(database, args):
     def login():
         user = database.find_user(flask.request.form["email"])
 
-        if user and user.password_matches(flask.request.form["password"]):
+        if user and Database.password_matches(user, flask.request.form["password"]):
             response = flask.make_response(flask.redirect(flask.url_for("home")))
             session_key = financial_game.sessionkey.create(
                 user, flask.request.headers, args.secret

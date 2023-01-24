@@ -86,6 +86,12 @@ def parse_command_line():
         help="SMTP log in password",
     )
     parser.add_argument(
+        "--email-from",
+        dest="email_from",
+        type=str,
+        help="The sender for any emails sent",
+    )
+    parser.add_argument(
         "--tls",
         dest="smtp_tls",
         action="store_true",
