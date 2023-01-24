@@ -10,7 +10,7 @@ import platform
 import yaml
 
 
-DEFAULT_DATABASE = "objects/test.sqlite3"
+DEFAULT_DATABASE = os.path.abspath("objects/test.sqlite3")
 DEFAULT_WEB_PORT = 8000
 DEFAULT_SMTP_PORT = 857
 DEFAULT_SMTP_SERVER = "smtp.gmail.com"
@@ -86,6 +86,7 @@ def load(args):
     )
 
     if args.secret is None and not os.path.isfile(args.settings):
+        print(f"Creating settings file: {args.settings}")
         write(
             args.settings,
             {
