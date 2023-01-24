@@ -9,4 +9,23 @@
 [![watch sheild](https://img.shields.io/github/watchers/marcpage/financial_game?label=Watch&style=social)](https://github.com/marcpage/financial_game/watchers)
 
 # financial_game
+
 Website that hosts a real-life financial game
+
+# Contributions
+
+Before submitting, make sure to run `black`, `pylint`, and `flake8` and ensure test coverage is at 100%.
+If you're on macOS or Linux, you can just run `./pr_build.sh format` which will do all this for you.
+
+# Runing the server
+
+`python3 -m financial_game`
+
+It will create:
+- **macOS**: `~/Library/Preferences/financial_game.yaml`
+- **Linux**: `~/.financial_game.yaml`
+- **Windows**: `%LOCALAPPDATA%\financial_game.yaml`
+
+You can use a different location by specifying `--settings <path to yaml file>`.
+This file contains many of the parameters you can pass (or did pass) on the command line.
+To get the full list of options on the command line: `python3 -m financial_game --help`.
