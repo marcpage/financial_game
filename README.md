@@ -19,7 +19,21 @@ If you're on macOS or Linux, you can just run `./pr_build.sh format` which will 
 
 # Runing the server
 
-`python3 -m financial_game`
+On macOS or Linux:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip3 install -r requirements.txt
+python3 -m financial_game
+```
+
+On Windows:
+```bash
+py -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt
+py -m financial_game
+```
 
 It will create:
 - **macOS**: `~/Library/Preferences/financial_game.yaml`
