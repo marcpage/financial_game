@@ -15,7 +15,7 @@ Website that hosts a real-life financial game
 # Contributions
 
 Before submitting, make sure to run `black`, `pylint`, and `flake8` and ensure test coverage is at 100%.
-If you're on macOS or Linux, you can just run `./pr_build.sh format` which will do all this for you.
+If you're on macOS or Linux, you can just run `python3 pr_build.py format` which will do all this for you.
 
 # Runing the server
 
