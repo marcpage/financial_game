@@ -57,6 +57,8 @@ class Start(threading.Thread):
             except queue.Empty:
                 pass
 
+        sys.stdout.flush()
+        sys.stderr.flush()
         assert not self.__check or self.return_code == 0, f"Return code = {self.return_code}"
         return self.return_code
 
