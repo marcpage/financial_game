@@ -152,7 +152,7 @@ if __name__ == "__main__":
     #
     #####################################
     github_log("##[group] Running flake8 python source validation")
-    github_log("##[command]flake8 {FLAKE8_FLAGS} {sources}")
+    github_log(f"##[command]flake8 {FLAKE8_FLAGS} {sources}")
     return_code = flake8.dump()
     return_codes.append(return_code)
     github_log("##[endgroup]")
