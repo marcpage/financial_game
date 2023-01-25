@@ -5,6 +5,7 @@
 
 import enum
 import hashlib
+import datetime
 
 import yaml
 
@@ -14,41 +15,141 @@ import financial_game.database
 TABLES = {
     "user": {
         "id": "INTEGER PRIMARY KEY",
-        "name": "VARCHAR(50)",
-        "email": "VARCHAR(50) UNIQUE",
-        "password_hash": "VARCHAR(64)",
+        "name": "VARCHAR(50) NOT NULL",
+        "email": "VARCHAR(50) UNIQUE NOT NULL",
+        "password_hash": "VARCHAR(64) NOT NULL",
         "sponsor_id": "INTEGER",
     },
     "bank": {
         "id": "INTEGER PRIMARY KEY",
-        "name": "VARCHAR(50) UNIQUE",
-        "type": "VARCHAR(4)",  # TypeOfBank
+        "name": "VARCHAR(50) UNIQUE NOT NULL",
+        "type": "VARCHAR(4) NOT NULL",  # TypeOfBank
         "url": "VARCHAR(2083)",
     },
     "account_type": {
         "id": "INTEGER PRIMARY KEY",
-        "name": "VARCHAR(50)",
-        "type": "VARCHAR(4)",  # TypeOfAccount
+        "name": "VARCHAR(50) NOT NULL",
+        "type": "VARCHAR(4) NOT NULL",  # TypeOfAccount
         "url": "VARCHAR(2083)",
-        "bank_id": "INTEGER",
+        "bank_id": "INTEGER NOT NULL",
+    },
+    "account": {
+        "id": "INTEGER PRIMARY KEY",
+        "label": "VARCHAR(50) NOT NULL",
+        "hint": "VARCHAR(128)",
+        "purpose": "VARCHAR(4)",  # AccountPurpose
+        "account_type_id": "INTEGER NOT NULL",
+        "user_id": "INTEGER NOT NULL",
+    },
+    "account_statement": {
+        "id": "INTEGER PRIMARY KEY",
+        "start_date": "TEXT NOT NULL",  # YYYY-MM-DD HH:MM:SS.SSS
+        "end_date": "TEXT NOT NULL",  # YYYY-MM-DD HH:MM:SS.SSS
+        "start_value": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "end_value": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "withdrawals": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "deposits": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "interest": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "fees": "INTEGER NOT NULL",  # in cents (x 100 = $)
+        "rate": "INTEGER NOT NULL",  # 1 = 0.01%, 100 = 1% 1000 = 10%
+        "mileage": "INTEGER",  # used for vehicles
+    },
+    "related_account": {
+        "account_id": "INTEGER",
+        "related_account_id": "INTEGER",
     },
 }
 
 
 class TypeOfBank(enum.Enum):
-    """Types of Bank objects"""
+    """Types of bank objects"""
 
     BANK = 1  # bank
 
 
 class TypeOfAccount(enum.Enum):
-    """Types of AccountType objects"""
+    """Types of account_type objects"""
 
     CRED = 1  # Credit Card
     CHCK = 2  # Checking
     SAVE = 3  # Savings
     MONM = 4  # Money Market
     BROK = 5  # Brokrage account
+
+
+class AccountPurpose(enum.Enum):
+    """Purposes for account objects"""
+
+    MRGC = 1  # Emergency Fund
+    SINK = 2  # Targeted / Sinking Fund
+    NYOU = 3  # self development / invest in you
+    BUDG = 4  # active budget funds
+    RTIR = 5  # retirement account
+    NVST = 6  # taxable investment
+
+
+class UserApi:
+    """User API"""
+
+    def __init__(self, database):
+        self.__db = database
+
+    # pylint: disable=too-many-arguments
+    def create(
+        self,
+        email: str,
+        password: str,
+        name: str,
+        sponsor_id: int,
+        password_is_hashed=False,
+    ):
+        """create a new employee entry"""
+        assert password is not None
+        return self.__db.insert(
+            "user",
+            email=email,
+            password_hash=password
+            if password_is_hashed
+            else Database.hash_password(password),
+            name=name,
+            sponsor_id=sponsor_id,
+        )
+
+    def get(self, user_id: int):
+        """Get a user by its id"""
+        return self.__db.get_one_or_none(
+            "user", _where_="id = :user_id", user_id=user_id
+        )
+
+    def find(self, email: str):
+        """Get a user by email (case insensitive)"""
+        return self.__db.get_one_or_none(
+            "user", _where_="email LIKE :email", email=email
+        )
+
+    def get_users(self):
+        """Get list of all users"""
+        return self.__db.get_all("user")
+
+    def get_sponsored(self, user_id: int):
+        """Get the people this person has sponsored"""
+        return self.__db.get_all(
+            "user", _where_="sponsor_id = :user_id", user_id=user_id
+        )
+
+    def count(self):
+        """Count total users"""
+        return self.__db.get_one_or_none("user", "COUNT(*)", _as_object_=False)[
+            "COUNT(*)"
+        ]
+
+    def change_info(self, user_id: int, **_to_update_):
+        """Change information about the user"""
+        assert "id" not in _to_update_
+        # TODO: If password in _to_update_ then -> password_hash  # pylint: disable=fixme
+        self.__db.change(
+            "user", "user_id", _where_="id = :user_id", user_id=user_id, **_to_update_
+        )
 
 
 class Database:
@@ -86,7 +187,7 @@ class Database:
 
     def __deserialize_users(self, serialized):
         assert "users" in serialized
-        assert self.count_users() == 0, "database already exists, cannot deserialize"
+        assert self.user().count() == 0, "database already exists, cannot deserialize"
         users = serialized["users"]
         created = {}
 
@@ -101,7 +202,7 @@ class Database:
                 sponsor_email is None or sponsor_email in created
             ), f"We haven't created {sponsor_email} yet"
             sponsor_id = None if sponsor_email is None else created[sponsor_email].id
-            created[user["email"]] = self.create_user(
+            created[user["email"]] = self.user().create(
                 user["email"],
                 user.get("password_hash", user.get("password", None)),
                 user["name"],
@@ -145,7 +246,7 @@ class Database:
 
     def serialize(self):
         """Converts the database contents to a dictionary that can be deserialized"""
-        users = self.get_users()
+        users = self.user().get_users()
         banks = self.get_banks()
         return {
             "users": {
@@ -175,62 +276,9 @@ class Database:
             },
         }
 
-    # Mark: User API
-
-    # pylint: disable=too-many-arguments
-    def create_user(
-        self,
-        email: str,
-        password: str,
-        name: str,
-        sponsor_id: int,
-        password_is_hashed=False,
-    ):
-        """create a new employee entry"""
-        assert password is not None
-        return self.__db.insert(
-            "user",
-            email=email,
-            password_hash=password
-            if password_is_hashed
-            else Database.hash_password(password),
-            name=name,
-            sponsor_id=sponsor_id,
-        )
-
-    def get_user(self, user_id: int):
-        """Get a user by its id"""
-        return self.__db.get_one_or_none(
-            "user", _where_="id = :user_id", user_id=user_id
-        )
-
-    def find_user(self, email: str):
-        """Get a user by email (case insensitive)"""
-        return self.__db.get_one_or_none(
-            "user", _where_="email LIKE :email", email=email
-        )
-
-    def get_users(self):
-        """Get list of all users"""
-        return self.__db.get_all("user")
-
-    def get_user_sponsored(self, user_id: int):
-        """Get the people this person has sponsored"""
-        return self.__db.get_all(
-            "user", _where_="sponsor_id = :user_id", user_id=user_id
-        )
-
-    def count_users(self):
-        """Count total users"""
-        return self.__db.get_one_or_none("user", "COUNT(*)", _as_object_=False)[
-            "COUNT(*)"
-        ]
-
-    def change_user_info(self, user_id: int, **_to_update_):
-        """Change information about the user"""
-        self.__db.change(
-            "user", "user_id", _where_="id = :user_id", user_id=user_id, **_to_update_
-        )
+    def user(self):
+        """Return the user API"""
+        return UserApi(self.__db)
 
     # Mark: Bank API
 
@@ -318,4 +366,160 @@ class Database:
                 _where_="id = :account_type_id",
                 account_type_id=account_type_id,
             )
+        )
+
+    # Mark: Account API
+
+    @staticmethod
+    def __patch_account(account):
+        if account is None:
+            return None
+
+        if isinstance(account, list):
+            return [Database.__patch_account(a) for a in account]
+
+        account.purpose = (
+            None if account.purpose is None else AccountPurpose[account.purpose]
+        )
+        return account
+
+    # pylint: disable=too-many-arguments
+    def create_account(
+        self,
+        user_id: int,
+        account_type_id: int,
+        label: str,
+        hint: str = None,
+        purpose: AccountPurpose = None,
+    ):
+        """Create a bank account"""
+        assert user_id is not None
+        assert account_type_id is not None
+        assert label is not None
+        return Database.__patch_account(
+            self.__db.insert(
+                "account",
+                label=label,
+                hint=hint,
+                purpose=None if purpose is None else purpose.name,
+                account_type_id=account_type_id,
+                user_id=user_id,
+            )
+        )
+
+    def change_account(self, account_id: int, **_to_update_):
+        """Change information about the account"""
+        assert "id" not in _to_update_
+        assert "user_id" not in _to_update_
+        # TODO: patch up purpose  # pylint: disable=fixme
+        self.__db.change(
+            "account",
+            "account_id",
+            _where_="id = :account_id",
+            account_id=account_id,
+            **_to_update_,
+        )
+
+    def get_account(self, account_id: int):
+        """Get a account by its id"""
+        return Database.__patch_account_type(
+            self.__db.get_one_or_none(
+                "account", _where_="id = :account_id", account_id=account_id
+            )
+        )
+
+    # Mark: AccountStatement API
+
+    @staticmethod
+    def __parse_date(date: str) -> datetime.date:
+        return datetime.datetime.strptime(date, "%Y-%m-%d").date()
+
+    @staticmethod
+    def __patch_account_statement(account_statement):
+        if account_statement is None:
+            return None
+
+        if isinstance(account_statement, list):
+            return [Database.__patch_account_statement(a) for a in account_statement]
+
+        account_statement.start_date = (
+            None
+            if account_statement.start_date is None
+            else Database.__parse_date(account_statement.start_date)
+        )
+        account_statement.end_date = (
+            None
+            if account_statement.end_date is None
+            else Database.__parse_date(account_statement.end_date)
+        )
+        account_statement.start_value = account_statement.start_value / 100.0
+        account_statement.end_value = account_statement.end_value / 100.0
+        account_statement.withdrawals = account_statement.withdrawals / 100.0
+        account_statement.deposits = account_statement.deposits / 100.0
+        account_statement.interest = account_statement.interest / 100.0
+        account_statement.rate = account_statement.rate / 100.0
+        return account_statement
+
+    # pylint: disable=too-many-arguments
+    def create_account_statement(
+        self,
+        account_id: int,
+        start_date: datetime.date,
+        end_date: datetime.date,
+        start_value: float,
+        end_value: float,
+        withdrawals: float,
+        deposits: float,
+        interest: float,
+        rate: float,
+        mileage: int = None,
+    ):
+        """Create a bank account"""
+        assert account_id is not None
+        assert start_date is not None
+        assert end_date is not None
+        assert start_value is not None
+        assert end_value is not None
+        assert withdrawals is not None
+        assert deposits is not None
+        assert interest is not None
+        assert rate is not None
+        return Database.__patch_account_statement(
+            self.__db.insert(
+                "account_statement",
+                account_id=account_id,
+                start_date=start_date.strftime("%Y-%m-%d %H:%M:%S.0"),
+                end_date=end_date.strftime("%Y-%m-%d %H:%M:%S.0"),
+                start_value=int(start_value * 100),
+                end_value=int(end_value * 100),
+                withdrawals=int(withdrawals * 100),
+                deposits=int(deposits * 100),
+                interest=int(interest * 100),
+                rate=int(rate * 100),
+                mileage=mileage,
+            )
+        )
+
+    def get_account_statements(self, account_id: int):
+        """Get statements for a given account"""
+        return Database.__patch_account_statement(
+            self.__db.get_all(
+                "account_statement",
+                _where_="account_id = :account_id",
+                account_id=account_id,
+            )
+        )
+
+    def change_account_statement(self, account_statement_id: int, **_to_update_):
+        """Change information about the account"""
+        assert "id" not in _to_update_
+        assert "user_id" not in _to_update_
+        # TODO: patch up start_date, end_date, start_value,  # pylint: disable=fixme
+        #       deposits, interest, fees, rate, withrawals, end_value
+        self.__db.change(
+            "account_statement",
+            "account_statement_id",
+            _where_="id = :account_statement_id",
+            account_statement_id=account_statement_id,
+            **_to_update_,
         )

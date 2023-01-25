@@ -42,7 +42,7 @@ def test_login_fail():
 def test_login_success():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        db.create_user("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
+        db.user().create("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
         app = financial_game.webserver.create_app(db, ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
@@ -60,7 +60,7 @@ def test_bad_session_password():
 
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        db.create_user("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
+        db.user().create("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
         app = financial_game.webserver.create_app(db, ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()

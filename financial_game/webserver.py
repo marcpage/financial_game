@@ -23,7 +23,7 @@ def get_user(request, args, database):
             request.headers,
             args.secret,
         )
-        user = database.get_user(user_id)
+        user = database.user().get(user_id)
 
         if user is not None and user.password_hash == password_hash:
             return user
@@ -70,7 +70,7 @@ def create_app(database, args):
 
     @app.route("/login", methods=["POST"])
     def login():
-        user = database.find_user(flask.request.form["email"])
+        user = database.user().find(flask.request.form["email"])
 
         if user and Database.password_matches(user, flask.request.form["password"]):
             response = flask.make_response(flask.redirect(flask.url_for("home")))
