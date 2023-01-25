@@ -101,6 +101,9 @@ if __name__ == "__main__":
     #####################################
     black_check = '--check' if len(sys.argv) == 1 else ''
     sources = " ".join(glob.glob(PYTHON_SOURCES))
+
+    github_log("##[group] Running black python source validation")
+    github_log(f"##[command]python3 -m black {black_check} {sources}")
     black = Start(f"python3 -m black {black_check} {sources}", check=False)
 
     if black_check:  # if black is modifying code wait until it is done
@@ -115,8 +118,6 @@ if __name__ == "__main__":
     #  black Python formatting / linting
     #
     #####################################
-    github_log("##[group] Running black python source validation")
-    github_log(f"##[command]python3 -m black {black_check} {sources}")
     return_code = black.dump()
     return_codes = [return_code]
     github_log("##[endgroup]")
