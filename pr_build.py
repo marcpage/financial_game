@@ -48,6 +48,8 @@ class Start(threading.Thread):
 
     def dump(self):
         streams = {'out': sys.stdout, 'err': sys.stderr}
+        sys.stdout.flush()
+        sys.stderr.flush()
 
         while self.__process is None or self.__messages.qsize() > 0 or self.__process.poll() is None:
             try:
@@ -75,7 +77,8 @@ class Start(threading.Thread):
 
 def github_log(text:str):
     if GITHUB_WORKFLOW:
-        print(text)
+        sys.stdout.write(text + "\n")
+        sys.stdout.flush()
 
 
 if __name__ == "__main__":
@@ -123,9 +126,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        print(f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 ")
+        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 \n")
     else:
-        print("✅ black verification successful")
+        sys.stdout.write("✅ black verification successful\n")
 
     #####################################
     #
@@ -139,9 +142,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        print(f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 ")
+        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 \n")
     else:
-        print("✅ pylint verification successful")
+        sys.stdout.write("✅ pylint verification successful\n")
 
     #####################################
     #
@@ -155,9 +158,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        print(f"{ERROR_PREFIX}💥💥 Please fix the above flake8 errors and resubmit 💥💥 ")
+        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above flake8 errors and resubmit 💥💥 \n")
     else:
-        print("✅ flake8 verification successful")
+        sys.stdout.write("✅ flake8 verification successful\n")
 
     #####################################
     #
@@ -171,9 +174,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        print(f"{ERROR_PREFIX}💥💥 Please fix the above test failures and resubmit 💥💥 ")
+        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above test failures and resubmit 💥💥 \n")
     else:
-        print("✅ unit tests passed")
+        sys.stdout.write("✅ unit tests passed\n")
 
     #####################################
     #
@@ -188,9 +191,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        print(f"{ERROR_PREFIX}💥💥 Please bring test coverage to $MINIMUM_TEST_COVERAGE% and resubmit 💥💥 ")
+        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please bring test coverage to $MINIMUM_TEST_COVERAGE% and resubmit 💥💥 \n")
     else:
-        print("✅ sufficient test coverage")
+        sys.stdout.write("✅ sufficient test coverage\n")
 
     #####################################
     #
