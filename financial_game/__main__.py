@@ -115,7 +115,7 @@ def parse_command_line():
             if os.path.isfile(args.database):
                 os.unlink(args.database)
 
-        args.database = f"sqlite:///{args.database}"
+        args.database = f"sqlite:///{os.path.abspath(args.database)}"
 
     return args
 

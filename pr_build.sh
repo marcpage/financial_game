@@ -36,7 +36,6 @@ rm -f $FLAKE8_OUTPUT
 if [ "$GITHUB_WORKFLOW" = "CI" ]; then
     export LOG_ECHO=echo
     export ERROR_PREFIX="##[error]"
-    export WARNING_PREFIX="##[warning]"
 else
     export ERROR_PREFIX="💥💥"
     export LOG_ECHO=true
@@ -50,7 +49,6 @@ fi
 #####################################
 
 $LOG_ECHO "##[group] Installing dependencies"
-mkdir -p $VENV_DIR
 $LOG_ECHO "##[command]python3 -m venv $VENV_DIR"
 python3 -m venv $VENV_DIR
 $LOG_ECHO "##[command]. $VENV_DIR/bin/activate"

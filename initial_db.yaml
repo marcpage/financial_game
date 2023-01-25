@@ -9,3 +9,5 @@ users:
         email: Jane.Doe@apple.com
         password: too many secrets
         sponsor_id: 1
+banks: {}
+
