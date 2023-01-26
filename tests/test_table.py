@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 
-from financial_game.database_model import Table, Integer, Identifier, String
+from financial_game.table import Table, Integer, Identifier, String
 
 
 def test_basic():
