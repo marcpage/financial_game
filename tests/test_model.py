@@ -14,25 +14,25 @@ def test_user():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        john = db.user().create("john.appleseed@apple.com", "Setec astronomy", "John", None)
+        john = db.user.create("john.appleseed@apple.com", "Setec astronomy", "John", None)
         assert john.id is not None
-        db.user().create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+        db.user.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
 
-        assert db.user().count() == 2, f"users = {db.user().count()}"
+        assert db.user.count() == 2, f"users = {db.user.count()}"
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        john = db.user().find("john.appleseed@apple.com")
+        john = db.user.find("john.appleseed@apple.com")
         john_id = john.id
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert john.name == "John"
         assert financial_game.model.Database.password_matches(john, "Setec astronomy")
         assert not financial_game.model.Database.password_matches(john, "setec astronomy")
         assert not financial_game.model.Database.password_matches(john, "too many secrets")
-        db.user().change_info(john.id, password_hash=financial_game.model.Database.hash_password("setec astronomy"))
+        db.user.change_info(john.id, password_hash=financial_game.model.Database.hash_password("setec astronomy"))
 
-        jane = db.user().find("jane.doe@apple.com")
+        jane = db.user.find("jane.doe@apple.com")
         jane_id = jane.id
         assert jane.name == "Jane"
         assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
@@ -40,8 +40,8 @@ def test_user():
         assert not financial_game.model.Database.password_matches(jane, "Setec astronomy")
         assert not financial_game.model.Database.password_matches(jane, "too many Secrets")
         assert jane.sponsor_id == john.id
-        assert len(db.user().get_sponsored(jane.id)) == 0
-        john_sponsored = db.user().get_sponsored(john.id)
+        assert len(db.user.get_sponsored(jane.id)) == 0
+        john_sponsored = db.user.get_sponsored(john.id)
         assert len(john_sponsored) == 1
         assert john_sponsored[0].id == jane.id
 
@@ -49,25 +49,25 @@ def test_user():
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        john = db.user().get(john_id)
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        john = db.user.get(john_id)
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert john.name == "John"
         assert financial_game.model.Database.password_matches(john, "setec astronomy")
         assert not financial_game.model.Database.password_matches(john, "Setec astronomy")
 
-        jane = db.user().get(jane_id)
+        jane = db.user.get(jane_id)
         assert jane.name == "Jane"
         assert jane.sponsor_id == john.id
-        assert len(db.user().get_sponsored(jane.id)) == 0
-        john_sponsored = db.user().get_sponsored(john.id)
+        assert len(db.user.get_sponsored(jane.id)) == 0
+        john_sponsored = db.user.get_sponsored(john.id)
         assert len(john_sponsored) == 1
         assert john_sponsored[0].id == jane.id
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        users = db.user().get_users()
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        users = db.user.get_users()
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert len(users) == 2
         user_names = [u.name for u in users]
         assert 'John' in user_names
@@ -230,9 +230,9 @@ def test_serialize():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        john = db.user().create("john.appleseed@apple.com", "Setec astronomy", "John", None)
+        john = db.user.create("john.appleseed@apple.com", "Setec astronomy", "John", None)
         assert john.id is not None
-        db.user().create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+        db.user.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
         boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/")
         boa_cc = db.create_account_type(boa.id, "Customized Cash Rewards", TypeOfAccount.CRED)
         boa_check = db.create_account_type(boa.id, "Advantage Banking", TypeOfAccount.CHCK, "https://www.bankofamerica.com/checking")
@@ -240,26 +240,26 @@ def test_serialize():
         chase_cc = db.create_account_type(chase.id, "Amazon Rewards", TypeOfAccount.CRED)
         chase_savings = db.create_account_type(chase.id, "Chase Savings", TypeOfAccount.SAVE)
 
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert db.count_banks() == 2
         serialized = db.serialize()
         db.close()
 
         db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3", serialized)
 
-        john = db.user().find("john.appleseed@apple.com")
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        john = db.user.find("john.appleseed@apple.com")
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert john.name == "John"
         assert not financial_game.model.Database.password_matches(john, "setec astronomy")
         assert financial_game.model.Database.password_matches(john, "Setec astronomy")
 
-        jane = db.user().find("jane.doe@apple.com")
+        jane = db.user.find("jane.doe@apple.com")
         assert jane.name == "Jane"
         assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
         assert jane.sponsor_id == john.id
-        assert len(db.user().get_sponsored(jane.id)) == 0
-        assert len(db.user().get_sponsored(john.id)) == 1
-        assert db.user().get_sponsored(john.id)[0].id == jane.id
+        assert len(db.user.get_sponsored(jane.id)) == 0
+        assert len(db.user.get_sponsored(john.id)) == 1
+        assert db.user.get_sponsored(john.id)[0].id == jane.id
 
         banks = db.get_banks()
         assert set(b.type for b in banks) == {TypeOfBank.BANK}
@@ -308,8 +308,8 @@ def test_serialize():
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test3.sqlite3", TEST_YAML_PATH)
 
-        users = db.user().get_users()
-        assert db.user().count() == 2, "users = {db.user().count()}"
+        users = db.user.get_users()
+        assert db.user.count() == 2, "users = {db.user.count()}"
         assert len(users) == 2
         user_names = [u.name for u in users]
         assert 'John' in user_names
