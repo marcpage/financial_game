@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+""" Script to run PR checks in parallel"""
 
 import sys
 import venv
@@ -13,76 +14,29 @@ import shutil
 
 
 MINIMUM_TEST_COVERAGE = 93  # bring back up to 100%
-COVERAGE_FLAGS = "--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
+COVERAGE_FLAGS = (
+    "--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
+)
 RUN_PORT = 8000
 RUN_DEBUG = "--debug"
 RUN_DATABASE = os.path.abspath("objects/test.sqlite3")
 RUN_RESET_SCRIPT = "initial_db.yaml"
-PYTHON_SOURCE_DIR = 'financial_game'
-RUN_ARGS = f"--port {RUN_PORT} --db {RUN_DATABASE} {RUN_DEBUG} --reset {RUN_RESET_SCRIPT}"
-PYTHON_SOURCES = os.path.join(PYTHON_SOURCE_DIR, '*.py')
-REQUIREMENTS_PATH = 'requirements.txt'
-VENV_PATH = '.venv'
-FLAKE8_FLAGS='--max-line-length=100'
-GITHUB_WORKFLOW = os.environ.get('GITHUB_WORKFLOW', '') == 'CI'
+PYTHON_SOURCE_DIR = "financial_game"
+RUN_ARGS = (
+    f"--port {RUN_PORT} --db {RUN_DATABASE} {RUN_DEBUG} --reset {RUN_RESET_SCRIPT}"
+)
+PYTHON_SOURCES = os.path.join(PYTHON_SOURCE_DIR, "*.py")
+REQUIREMENTS_PATH = "requirements.txt"
+VENV_PATH = ".venv"
+FLAKE8_FLAGS = "--max-line-length=100"
+GITHUB_WORKFLOW = os.environ.get("GITHUB_WORKFLOW", "") == "CI"
 ERROR_PREFIX = "##[error]" if GITHUB_WORKFLOW else "💥💥"
-LINT_ERROR_PATTERN = re.compile(r'^(.*:.*:.*:)', re.MULTILINE)
-PIP_QUIET = '' if GITHUB_WORKFLOW else '--quiet'
+LINT_ERROR_PATTERN = re.compile(r"^(.*:.*:.*:)", re.MULTILINE)
+PIP_QUIET = "" if GITHUB_WORKFLOW else "--quiet"
 
 
-class Start(threading.Thread):
-    def __init__(self, command:str, venv:str=VENV_PATH, line_filter=None, check:bool=False):
-        self.command = command
-        self.venv = venv
-        self.__check = check
-        self.__messages = queue.Queue()
-        self.__line_filter = (lambda x:x) if line_filter is None else line_filter
-        self.return_code = None
-        self.__process = None
-        threading.Thread.__init__(self, daemon=True)
-        self.start()
-
-    def __stream(self, stream, name:str):
-        for line in iter(stream.readline, ''):
-            self.__messages.put((name, self.__line_filter(line)))
-
-    def dump(self):
-        streams = {'out': sys.stdout, 'err': sys.stderr}
-        sys.stdout.flush()
-        sys.stderr.flush()
-
-        while self.__process is None or self.__messages.qsize() > 0 or self.__process.poll() is None:
-            try:
-                message = self.__messages.get(timeout=0.100)
-                streams[message[0]].write(message[1])
-
-            except queue.Empty:
-                pass
-
-        sys.stdout.flush()
-        sys.stderr.flush()
-        assert not self.__check or self.return_code == 0, f"Return code = {self.return_code}"
-        return self.return_code
-
-    def run(self):
-        shell = shutil.which('bash')
-        self.__process = subprocess.Popen((shell, '-c', f"source .venv/bin/activate && {self.command}"),stdout=subprocess.PIPE, stderr=subprocess.PIPE, bufsize=1, universal_newlines=True)
-        stdout = threading.Thread(target=self.__stream, args=(self.__process.stdout, 'out'))
-        stderr = threading.Thread(target=self.__stream, args=(self.__process.stderr, 'err'))
-        stdout.start()
-        stderr.start()
-        self.return_code = self.__process.wait()
-        assert not self.__check or self.return_code == 0, f"Return code = {self.return_code}"
-
-
-def github_log(text:str):
-    if GITHUB_WORKFLOW:
-        sys.stdout.write(text + "\n")
-        sys.stdout.flush()
-
-
-if __name__ == "__main__":
-
+def main():  # pylint: disable=too-many-branches,too-many-statements
+    """PR script"""
     #####################################
     #
     #  Python venv
@@ -102,8 +56,8 @@ if __name__ == "__main__":
     #  Start parallel processes
     #
     #####################################
-    black_check = '--check' if len(sys.argv) == 1 else ''
-    sources = " ".join(glob.glob(PYTHON_SOURCES))
+    black_check = "--check" if len(sys.argv) == 1 else ""
+    sources = " ".join(glob.glob(PYTHON_SOURCES)) + " " + __file__
 
     github_log("##[group] Running black python source validation")
     github_log(f"##[command]python3 -m black {black_check} {sources}")
@@ -112,9 +66,19 @@ if __name__ == "__main__":
     if black_check:  # if black is modifying code wait until it is done
         black.join()
 
-    pylint = Start(f"pylint {sources}", check=False, line_filter=lambda l:LINT_ERROR_PATTERN.sub(f"{ERROR_PREFIX}\\1", l))
-    flake8 = Start(f"flake8 {FLAKE8_FLAGS} {sources}", check=False, line_filter=lambda l:LINT_ERROR_PATTERN.sub(f"{ERROR_PREFIX}\\1", l))
-    tests = Start(f"python3 -m coverage run --source={PYTHON_SOURCE_DIR} -m pytest", check=False)
+    pylint = Start(
+        f"pylint {sources}",
+        check=False,
+        line_filter=lambda line: LINT_ERROR_PATTERN.sub(f"{ERROR_PREFIX}\\1", line),
+    )
+    flake8 = Start(
+        f"flake8 {FLAKE8_FLAGS} {sources}",
+        check=False,
+        line_filter=lambda line: LINT_ERROR_PATTERN.sub(f"{ERROR_PREFIX}\\1", line),
+    )
+    tests = Start(
+        f"python3 -m coverage run --source={PYTHON_SOURCE_DIR} -m pytest", check=False
+    )
 
     #####################################
     #
@@ -126,7 +90,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 \n")
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 \n"
+        )
     else:
         sys.stdout.write("✅ black verification successful\n")
 
@@ -142,7 +108,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 \n")
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 \n"
+        )
     else:
         sys.stdout.write("✅ pylint verification successful\n")
 
@@ -158,7 +126,9 @@ if __name__ == "__main__":
     github_log("##[endgroup]")
 
     if return_code != 0:
-        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above flake8 errors and resubmit 💥💥 \n")
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please fix the above flake8 errors and resubmit 💥💥 \n"
+        )
     else:
         sys.stdout.write("✅ flake8 verification successful\n")
 
@@ -168,13 +138,17 @@ if __name__ == "__main__":
     #
     #####################################
     github_log("##[group] Running python unit tests")
-    github_log(f"##[command]python3 -m coverage run --source={PYTHON_SOURCE_DIR} -m pytest")
+    github_log(
+        f"##[command]python3 -m coverage run --source={PYTHON_SOURCE_DIR} -m pytest"
+    )
     return_code = tests.dump()
     return_codes.append(return_code)
     github_log("##[endgroup]")
 
     if return_code != 0:
-        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please fix the above test failures and resubmit 💥💥 \n")
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please fix the above test failures and resubmit 💥💥 \n"
+        )
     else:
         sys.stdout.write("✅ unit tests passed\n")
 
@@ -185,13 +159,23 @@ if __name__ == "__main__":
     #####################################
 
     github_log("##[group] Checking python unit test coverage")
-    github_log(f"##[command]python3 -m coverage report --fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}")
-    return_code = Start(f"python3 -m coverage report --fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}", check=False).dump()
+    github_log(
+        "##[command]python3 -m coverage report "
+        + f"--fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}"
+    )
+    return_code = Start(
+        "python3 -m coverage report "
+        + f"--fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}",
+        check=False,
+    ).dump()
     return_codes.append(return_code)
     github_log("##[endgroup]")
 
     if return_code != 0:
-        sys.stdout.write(f"{ERROR_PREFIX}💥💥 Please bring test coverage to {MINIMUM_TEST_COVERAGE}% and resubmit 💥💥 \n")
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please bring test coverage to "
+            + f"{MINIMUM_TEST_COVERAGE}% and resubmit 💥💥 \n"
+        )
     else:
         sys.stdout.write("✅ sufficient test coverage\n")
 
@@ -201,8 +185,11 @@ if __name__ == "__main__":
     #
     #####################################
     if "run" in sys.argv:
-        Start(f"python3 -m {PYTHON_SOURCE_DIR} {RUN_ARGS}", check=False).dump()
+        try:
+            Start(f"python3 -m {PYTHON_SOURCE_DIR} {RUN_ARGS}", check=False).dump()
 
+        except KeyboardInterrupt:
+            pass
 
     #####################################
     #
@@ -211,3 +198,86 @@ if __name__ == "__main__":
     #####################################
     if any(r != 0 for r in return_codes):
         sys.exit(sum(return_codes) if sum(return_codes) != 0 else 1)
+
+
+class Start(threading.Thread):
+    """Start a command line executing in a python environment"""
+
+    def __init__(
+        self,
+        command: str,
+        virt_env: str = VENV_PATH,
+        line_filter=None,
+        check: bool = False,
+    ):
+        self.command = command
+        self.venv = virt_env
+        self.__check = check
+        self.__messages = queue.Queue()
+        self.__line_filter = (lambda x: x) if line_filter is None else line_filter
+        self.return_code = None
+        self.__process = None
+        threading.Thread.__init__(self, daemon=True)
+        self.start()
+
+    def __stream(self, stream, name: str):
+        for line in iter(stream.readline, ""):
+            self.__messages.put((name, self.__line_filter(line)))
+
+    def __start_stream(self, stream, name: str) -> threading.Thread:
+        thread = threading.Thread(target=self.__stream, args=(stream, name))
+        thread.start()
+        return thread
+
+    def dump(self):
+        """While waiting for the process to complete, dump stderr and stdout"""
+        streams = {"out": sys.stdout, "err": sys.stderr}
+        sys.stdout.flush()
+        sys.stderr.flush()
+
+        while (
+            self.__process is None
+            or self.__messages.qsize() > 0
+            or self.__process.poll() is None
+        ):
+            try:
+                message = self.__messages.get(timeout=0.100)
+                streams[message[0]].write(message[1])
+
+            except queue.Empty:
+                pass
+
+        sys.stdout.flush()
+        sys.stderr.flush()
+        assert (
+            not self.__check or self.return_code == 0
+        ), f"Return code = {self.return_code}"
+        return self.return_code
+
+    def run(self):
+        """Start the command line running and start the io threads"""
+        shell = shutil.which("bash")
+        with subprocess.Popen(
+            (shell, "-c", f"source .venv/bin/activate && {self.command}"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            bufsize=1,
+            universal_newlines=True,
+        ) as self.__process:
+            self.__start_stream(self.__process.stdout, "out")
+            self.__start_stream(self.__process.stderr, "err")
+            self.return_code = self.__process.wait()
+            assert (
+                not self.__check or self.return_code == 0
+            ), f"Return code = {self.return_code}"
+
+
+def github_log(text: str):
+    """Log if we're in a GitHub action"""
+    if GITHUB_WORKFLOW:
+        sys.stdout.write(text + "\n")
+        sys.stdout.flush()
+
+
+if __name__ == "__main__":
+    main()
