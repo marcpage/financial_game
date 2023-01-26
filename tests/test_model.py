@@ -80,14 +80,14 @@ def test_bank():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/")
+        boa = db.bank.create("Bank of America", "https://www.bankofamerica.com/")
         boa_id = boa.id
         assert boa.id is not None, boa
         assert boa.name == "Bank of America", boa
         assert boa.url == "https://www.bankofamerica.com/", boa
         assert boa.type == TypeOfBank.BANK, boa
 
-        chase = db.create_bank("Chase", "https://www.chase.com/")
+        chase = db.bank.create("Chase", "https://www.chase.com/")
         chase_id = chase.id
         assert chase.id is not None, chase
         assert chase.name == "Chase", chase
@@ -97,13 +97,13 @@ def test_bank():
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        boa = db.get_bank(boa_id)
+        boa = db.bank.get(boa_id)
         assert boa.id is not None
         assert boa.name == "Bank of America"
         assert boa.url == "https://www.bankofamerica.com/"
         assert boa.type == TypeOfBank.BANK
 
-        chase = db.get_bank(chase_id)
+        chase = db.bank.get(chase_id)
         assert chase.id is not None
         assert chase.name == "Chase"
         assert chase.url == "https://www.chase.com/"
@@ -112,14 +112,14 @@ def test_bank():
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        banks = db.get_banks()
+        banks = db.bank.get_banks()
         assert set(b.type for b in banks) == {TypeOfBank.BANK}, f"banks = {banks}"
         assert "Chase" in [b.name for b in banks], f"banks = {banks}"
         assert "Bank of America" in [b.name for b in banks], f"banks = {banks}"
         assert "https://www.bankofamerica.com/" in [b.url for b in banks], f"banks = {banks}"
         assert "https://www.chase.com/" in [b.url for b in banks], f"banks = {banks}"
 
-        assert db.get_bank(0xDEADBEEF) is None
+        assert db.bank.get(0xDEADBEEF) is None
 
         db.close()
 
@@ -128,7 +128,7 @@ def test_account_type():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/")
+        boa = db.bank.create("Bank of America", "https://www.bankofamerica.com/")
         boa_id = boa.id
         assert boa.id is not None, boa
 
@@ -148,7 +148,7 @@ def test_account_type():
         assert boa_check.url == "https://www.bankofamerica.com/checking"
         assert boa_check.bank_id == boa_id
 
-        chase = db.create_bank("Chase", "https://www.chase.com/")
+        chase = db.bank.create("Chase", "https://www.chase.com/")
         chase_id = chase.id
         assert chase.id is not None
 
@@ -171,8 +171,8 @@ def test_account_type():
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
-        boa = db.get_bank(boa_id)
-        boa_account_types = db.get_bank_account_types(boa.id)
+        boa = db.bank.get(boa_id)
+        boa_account_types = db.bank.get_account_types(boa.id)
         assert len(boa_account_types) == 2
         boa_cc = [t for t in boa_account_types if t.type == TypeOfAccount.CRED][0]
         boa_check = [t for t in boa_account_types if t.type == TypeOfAccount.CHCK][0]
@@ -184,8 +184,8 @@ def test_account_type():
         assert boa_cc.bank_id == boa.id
         assert boa_check.bank_id == boa.id
 
-        chase = db.get_bank(chase_id)
-        chase_account_types = db.get_bank_account_types(chase.id)
+        chase = db.bank.get(chase_id)
+        chase_account_types = db.bank.get_account_types(chase.id)
         assert len(chase_account_types) == 2
         chase_cc = [t for t in chase_account_types if t.type == TypeOfAccount.CRED][0]
         chase_savings = [t for t in chase_account_types if t.type == TypeOfAccount.SAVE][0]
@@ -233,15 +233,15 @@ def test_serialize():
         john = db.user.create("john.appleseed@apple.com", "Setec astronomy", "John", None)
         assert john.id is not None
         db.user.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
-        boa = db.create_bank("Bank of America", "https://www.bankofamerica.com/")
+        boa = db.bank.create("Bank of America", "https://www.bankofamerica.com/")
         boa_cc = db.create_account_type(boa.id, "Customized Cash Rewards", TypeOfAccount.CRED)
         boa_check = db.create_account_type(boa.id, "Advantage Banking", TypeOfAccount.CHCK, "https://www.bankofamerica.com/checking")
-        chase = db.create_bank("Chase", "https://www.chase.com/")
+        chase = db.bank.create("Chase", "https://www.chase.com/")
         chase_cc = db.create_account_type(chase.id, "Amazon Rewards", TypeOfAccount.CRED)
         chase_savings = db.create_account_type(chase.id, "Chase Savings", TypeOfAccount.SAVE)
 
         assert db.user.count() == 2, "users = {db.user.count()}"
-        assert db.count_banks() == 2
+        assert db.bank.count() == 2
         serialized = db.serialize()
         db.close()
 
@@ -261,7 +261,7 @@ def test_serialize():
         assert len(db.user.get_sponsored(john.id)) == 1
         assert db.user.get_sponsored(john.id)[0].id == jane.id
 
-        banks = db.get_banks()
+        banks = db.bank.get_banks()
         assert set(b.type for b in banks) == {TypeOfBank.BANK}
         assert "Chase" in [b.name for b in banks]
         assert "Bank of America" in [b.name for b in banks]
@@ -273,12 +273,12 @@ def test_serialize():
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3")
 
-        boa = db.get_bank(boa_id)
+        boa = db.bank.get(boa_id)
         assert boa.id is not None
         assert boa.name == "Bank of America"
         assert boa.url == "https://www.bankofamerica.com/"
         assert boa.type == TypeOfBank.BANK
-        boa_account_types = db.get_bank_account_types(boa.id)
+        boa_account_types = db.bank.get_account_types(boa.id)
         boa_cc = [t for t in boa_account_types if t.type == TypeOfAccount.CRED][0]
         boa_check = [t for t in boa_account_types if t.type == TypeOfAccount.CHCK][0]
         assert set(t.type for t in boa_account_types) == {TypeOfAccount.CHCK, TypeOfAccount.CRED}
@@ -289,12 +289,12 @@ def test_serialize():
         assert boa_cc.bank_id == boa.id
         assert boa_check.bank_id == boa.id
 
-        chase = db.get_bank(chase_id)
+        chase = db.bank.get(chase_id)
         assert chase.id is not None
         assert chase.name == "Chase"
         assert chase.url == "https://www.chase.com/"
         assert chase.type == TypeOfBank.BANK
-        chase_account_types = db.get_bank_account_types(chase.id)
+        chase_account_types = db.bank.get_account_types(chase.id)
         chase_cc = [t for t in chase_account_types if t.type == TypeOfAccount.CRED][0]
         chase_savings = [t for t in chase_account_types if t.type == TypeOfAccount.SAVE][0]
         assert set(t.type for t in chase_account_types) == {TypeOfAccount.SAVE, TypeOfAccount.CRED}
@@ -314,14 +314,14 @@ def test_serialize():
         user_names = [u.name for u in users]
         assert 'John' in user_names
         assert 'Jane' in user_names
-        banks = db.get_banks()
+        banks = db.bank.get_banks()
 
         boa = [b for b in banks if b.name == "Bank of America"][0]
         assert boa.id is not None
         assert boa.name == "Bank of America"
         assert boa.url == "https://www.bankofamerica.com/"
         assert boa.type == TypeOfBank.BANK
-        boa_account_types = db.get_bank_account_types(boa.id)
+        boa_account_types = db.bank.get_account_types(boa.id)
         boa_cc = [t for t in boa_account_types if t.type == TypeOfAccount.CRED][0]
         boa_check = [t for t in boa_account_types if t.type == TypeOfAccount.CHCK][0]
         assert set(t.type for t in boa_account_types) == {TypeOfAccount.CHCK, TypeOfAccount.CRED}
@@ -337,7 +337,7 @@ def test_serialize():
         assert chase.name == "Chase"
         assert chase.url == "https://www.chase.com/"
         assert chase.type == TypeOfBank.BANK
-        chase_account_types = db.get_bank_account_types(chase.id)
+        chase_account_types = db.bank.get_account_types(chase.id)
         chase_cc = [t for t in chase_account_types if t.type == TypeOfAccount.CRED][0]
         chase_savings = [t for t in chase_account_types if t.type == TypeOfAccount.SAVE][0]
         assert set(t.type for t in chase_account_types) == {TypeOfAccount.SAVE, TypeOfAccount.CRED}
