@@ -174,6 +174,7 @@ class Database:
         """
         self.__db = financial_game.database.Connection.connect(db_url)
         self.__db.create_tables(**TABLES)
+        self.user = UserApi(self.__db)
 
         if serialized is not None:
             try:
@@ -187,7 +188,7 @@ class Database:
 
     def __deserialize_users(self, serialized):
         assert "users" in serialized
-        assert self.user().count() == 0, "database already exists, cannot deserialize"
+        assert self.user.count() == 0, "database already exists, cannot deserialize"
         users = serialized["users"]
         created = {}
 
@@ -202,7 +203,7 @@ class Database:
                 sponsor_email is None or sponsor_email in created
             ), f"We haven't created {sponsor_email} yet"
             sponsor_id = None if sponsor_email is None else created[sponsor_email].id
-            created[user["email"]] = self.user().create(
+            created[user["email"]] = self.user.create(
                 user["email"],
                 user.get("password_hash", user.get("password", None)),
                 user["name"],
@@ -246,7 +247,7 @@ class Database:
 
     def serialize(self):
         """Converts the database contents to a dictionary that can be deserialized"""
-        users = self.user().get_users()
+        users = self.user.get_users()
         banks = self.get_banks()
         return {
             "users": {
@@ -275,10 +276,6 @@ class Database:
                 for b in banks
             },
         }
-
-    def user(self):
-        """Return the user API"""
-        return UserApi(self.__db)
 
     # Mark: Bank API
 
