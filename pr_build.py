@@ -11,6 +11,7 @@ import re
 import threading
 import queue
 import shutil
+import time
 
 
 MINIMUM_TEST_COVERAGE = 93  # bring back up to 100%
@@ -85,7 +86,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
     #  black Python formatting / linting
     #
     #####################################
-    return_code = black.dump()
+    return_code, duration = black.dump()
     return_codes = [return_code]
     github_log("##[endgroup]")
 
@@ -94,25 +95,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
             f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 \n"
         )
     else:
-        sys.stdout.write("✅ black verification successful\n")
-
-    #####################################
-    #
-    #  pylint Python linting
-    #
-    #####################################
-    github_log("##[group] Running pylint python source validation")
-    github_log(f"##[command]pylint {sources}")
-    return_code = pylint.dump()
-    return_codes.append(return_code)
-    github_log("##[endgroup]")
-
-    if return_code != 0:
-        sys.stdout.write(
-            f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 \n"
-        )
-    else:
-        sys.stdout.write("✅ pylint verification successful\n")
+        sys.stdout.write(f"✅ black verification successful ({duration:0.3f} seconds)\n")
 
     #####################################
     #
@@ -121,7 +104,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
     #####################################
     github_log("##[group] Running flake8 python source validation")
     github_log(f"##[command]flake8 {FLAKE8_FLAGS} {sources}")
-    return_code = flake8.dump()
+    return_code, duration = flake8.dump()
     return_codes.append(return_code)
     github_log("##[endgroup]")
 
@@ -130,7 +113,9 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
             f"{ERROR_PREFIX}💥💥 Please fix the above flake8 errors and resubmit 💥💥 \n"
         )
     else:
-        sys.stdout.write("✅ flake8 verification successful\n")
+        sys.stdout.write(
+            f"✅ flake8 verification successful ({duration:0.3f} seconds)\n"
+        )
 
     #####################################
     #
@@ -141,7 +126,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
     github_log(
         f"##[command]python3 -m coverage run --source={PYTHON_SOURCE_DIR} -m pytest"
     )
-    return_code = tests.dump()
+    return_code, duration = tests.dump()
     return_codes.append(return_code)
     github_log("##[endgroup]")
 
@@ -150,7 +135,27 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
             f"{ERROR_PREFIX}💥💥 Please fix the above test failures and resubmit 💥💥 \n"
         )
     else:
-        sys.stdout.write("✅ unit tests passed\n")
+        sys.stdout.write(f"✅ unit tests passed ({duration:0.3f} seconds)\n")
+
+    #####################################
+    #
+    #  pylint Python linting
+    #
+    #####################################
+    github_log("##[group] Running pylint python source validation")
+    github_log(f"##[command]pylint {sources}")
+    return_code, duration = pylint.dump()
+    return_codes.append(return_code)
+    github_log("##[endgroup]")
+
+    if return_code != 0:
+        sys.stdout.write(
+            f"{ERROR_PREFIX}💥💥 Please fix the above pylint errors and resubmit 💥💥 \n"
+        )
+    else:
+        sys.stdout.write(
+            f"✅ pylint verification successful ({duration:0.3f} seconds)\n"
+        )
 
     #####################################
     #
@@ -163,7 +168,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
         "##[command]python3 -m coverage report "
         + f"--fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}"
     )
-    return_code = Start(
+    return_code, _ = Start(
         "python3 -m coverage report "
         + f"--fail-under={MINIMUM_TEST_COVERAGE} {COVERAGE_FLAGS}",
         check=False,
@@ -200,7 +205,7 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
         sys.exit(sum(return_codes) if sum(return_codes) != 0 else 1)
 
 
-class Start(threading.Thread):
+class Start(threading.Thread):  # pylint: disable=too-many-instance-attributes
     """Start a command line executing in a python environment"""
 
     def __init__(
@@ -219,6 +224,8 @@ class Start(threading.Thread):
         self.__process = None
         threading.Thread.__init__(self, daemon=True)
         self.start()
+        self.start_time = time.perf_counter()
+        self.duration = None
 
     def __stream(self, stream, name: str):
         for line in iter(stream.readline, ""):
@@ -252,11 +259,13 @@ class Start(threading.Thread):
         assert (
             not self.__check or self.return_code == 0
         ), f"Return code = {self.return_code}"
-        return self.return_code
+        self.join()
+        return self.return_code, self.duration
 
     def run(self):
         """Start the command line running and start the io threads"""
         shell = shutil.which("bash")
+
         with subprocess.Popen(
             (shell, "-c", f"source .venv/bin/activate && {self.command}"),
             stdout=subprocess.PIPE,
@@ -270,6 +279,8 @@ class Start(threading.Thread):
             assert (
                 not self.__check or self.return_code == 0
             ), f"Return code = {self.return_code}"
+
+        self.duration = time.perf_counter() - self.start_time
 
 
 def github_log(text: str):
