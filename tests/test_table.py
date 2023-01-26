@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
 
-from financial_game.table import Table, Integer, Identifier, String
+import datetime
+
+
+from financial_game.table import Table, Integer, Identifier, String, Date
 
 
 def test_basic():
@@ -59,7 +62,20 @@ def test_normalize():
     assert for_db['name'] == 'john'
 
 
+def test_date():
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        birthday = Date()
+    user = User(name="John", birthday="1973-06-30 00:00:00.000")
+    assert user.id is None
+    assert user.name == "John"
+    assert user.birthday == datetime.date(1973, 6, 30)
+    assert user.denormalize()['birthday'] == "1973-06-30 00:00:00.000"
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
     test_normalize()
+    test_date()
