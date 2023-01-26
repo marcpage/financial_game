@@ -12,7 +12,7 @@ import queue
 import shutil
 
 
-MINIMUM_TEST_COVERAGE = 86  # bring back up to 100%
+MINIMUM_TEST_COVERAGE = 93  # bring back up to 100%
 COVERAGE_FLAGS = "--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
 RUN_PORT = 8000
 RUN_DEBUG = "--debug"
