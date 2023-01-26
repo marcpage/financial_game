@@ -152,6 +152,62 @@ class UserApi:
         )
 
 
+class BankApi:
+    """Bank api"""
+
+    def __init__(self, database):
+        self.__db = database
+
+    @staticmethod
+    def patch(bank):
+        """patch database entry for usability"""
+        if bank is None:
+            return None
+
+        if isinstance(bank, list):
+            return [BankApi.patch(b) for b in bank]
+
+        bank.type = TypeOfBank[bank.type]
+        return bank
+
+    def create(
+        self, name: str, url: str = None, bank_type: TypeOfBank = TypeOfBank.BANK
+    ):
+        """Create a new bank"""
+        assert name is not None
+        return BankApi.patch(
+            self.__db.insert("bank", name=name, url=url, type=bank_type.name)
+        )
+
+    def get(self, bank_id: int):
+        """Get a bank by its id"""
+        return BankApi.patch(
+            self.__db.get_one_or_none("bank", _where_="id = :bank_id", bank_id=bank_id)
+        )
+
+    def get_banks(self, bank_type: TypeOfBank = TypeOfBank.BANK):
+        """Get all the banks of a given type"""
+        return BankApi.patch(
+            self.__db.get_all(
+                "bank", _where_="type = :bank_type", bank_type=bank_type.name
+            )
+        )
+
+    def count(self):
+        """Count total banks"""
+        return self.__db.get_one_or_none("bank", "COUNT(*)", _as_object_=False)[
+            "COUNT(*)"
+        ]
+
+    def get_account_types(self, bank_id: int):
+        """Get the types of accounts associated with a bank"""
+        return Database.patch_account_type(
+            self.__db.get_all(
+                "account_type", _where_="bank_id = :bank_id", bank_id=bank_id
+            )
+        )
+
+
 class Database:
     """stored information"""
 
@@ -175,6 +231,7 @@ class Database:
         self.__db = financial_game.database.Connection.connect(db_url)
         self.__db.create_tables(**TABLES)
         self.user = UserApi(self.__db)
+        self.bank = BankApi(self.__db)
 
         if serialized is not None:
             try:
@@ -213,14 +270,14 @@ class Database:
 
     def __deserialize_banks(self, serialized):
         assert "banks" in serialized
-        assert self.count_banks() == 0, "database already exists, cannot deserialize"
+        assert self.bank.count() == 0, "database already exists, cannot deserialize"
 
         for bank_id in serialized["banks"]:
             bank = serialized["banks"][bank_id]
             assert bank["type"] is not None
             assert bank["type"] in dir(TypeOfBank)
             assert bank["name"] is not None
-            new_bank = self.create_bank(
+            new_bank = self.bank.create(
                 bank["name"], bank.get("url", None), TypeOfBank[bank["type"]]
             )
             assert new_bank.id is not None
@@ -248,7 +305,7 @@ class Database:
     def serialize(self):
         """Converts the database contents to a dictionary that can be deserialized"""
         users = self.user.get_users()
-        banks = self.get_banks()
+        banks = self.bank.get_banks()
         return {
             "users": {
                 u.id: {
@@ -270,72 +327,23 @@ class Database:
                             "type": t.type.name,
                             "url": t.url,
                         }
-                        for t in self.get_bank_account_types(b.id)
+                        for t in self.bank.get_account_types(b.id)
                     },
                 }
                 for b in banks
             },
         }
 
-    # Mark: Bank API
-
-    @staticmethod
-    def __patch_bank(bank):
-        if bank is None:
-            return None
-
-        if isinstance(bank, list):
-            return [Database.__patch_bank(b) for b in bank]
-
-        bank.type = TypeOfBank[bank.type]
-        return bank
-
-    def create_bank(
-        self, name: str, url: str = None, bank_type: TypeOfBank = TypeOfBank.BANK
-    ):
-        """Create a new bank"""
-        assert name is not None
-        return Database.__patch_bank(
-            self.__db.insert("bank", name=name, url=url, type=bank_type.name)
-        )
-
-    def get_bank(self, bank_id: int):
-        """Get a bank by its id"""
-        return Database.__patch_bank(
-            self.__db.get_one_or_none("bank", _where_="id = :bank_id", bank_id=bank_id)
-        )
-
-    def get_banks(self, bank_type: TypeOfBank = TypeOfBank.BANK):
-        """Get all the banks of a given type"""
-        return Database.__patch_bank(
-            self.__db.get_all(
-                "bank", _where_="type = :bank_type", bank_type=bank_type.name
-            )
-        )
-
-    def count_banks(self):
-        """Count total banks"""
-        return self.__db.get_one_or_none("bank", "COUNT(*)", _as_object_=False)[
-            "COUNT(*)"
-        ]
-
-    def get_bank_account_types(self, bank_id: int):
-        """Get the types of accounts associated with a bank"""
-        return Database.__patch_account_type(
-            self.__db.get_all(
-                "account_type", _where_="bank_id = :bank_id", bank_id=bank_id
-            )
-        )
-
     # Mark: AccountType API
 
     @staticmethod
-    def __patch_account_type(account_type):
+    def patch_account_type(account_type):
+        """patch database objects for usability"""
         if account_type is None:
             return None
 
         if isinstance(account_type, list):
-            return [Database.__patch_account_type(a) for a in account_type]
+            return [Database.patch_account_type(a) for a in account_type]
 
         account_type.type = TypeOfAccount[account_type.type]
         return account_type
@@ -345,7 +353,7 @@ class Database:
     ):
         """Create a bank account type"""
         assert name is not None
-        return Database.__patch_account_type(
+        return Database.patch_account_type(
             self.__db.insert(
                 "account_type",
                 name=name,
@@ -357,7 +365,7 @@ class Database:
 
     def get_account_type(self, account_type_id: int):
         """Get a account type by its id"""
-        return Database.__patch_account_type(
+        return Database.patch_account_type(
             self.__db.get_one_or_none(
                 "account_type",
                 _where_="id = :account_type_id",
@@ -419,7 +427,7 @@ class Database:
 
     def get_account(self, account_id: int):
         """Get a account by its id"""
-        return Database.__patch_account_type(
+        return Database.patch_account_type(
             self.__db.get_one_or_none(
                 "account", _where_="id = :account_id", account_id=account_id
             )
