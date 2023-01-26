@@ -4,6 +4,9 @@
 """
 
 
+import datetime
+
+
 class DatabaseType:
     """Base class for all database types"""
 
@@ -38,6 +41,25 @@ class String(DatabaseType):
 
     def __str__(self):
         return f"VARCHAR({self.length})"
+
+
+class Date(String):
+    """Date or really VARCHAR"""
+
+    def __init__(self):
+        super().__init__(10)
+
+    def normalize(self, value):
+        """convert value (YYYY-MM-DD HH:MM:SS.SSS) to usable type"""
+        return (
+            None
+            if value is None
+            else datetime.datetime.strptime(value.split(" ")[0], "%Y-%m-%d")
+        ).date()
+
+    def denormalize(self, value):
+        """convert usable type to database value (YYYY-MM-DD HH:MM:SS.SSS)"""
+        return value.strftime("%Y-%m-%d") + " 00:00:00.000"
 
 
 class Table:
