@@ -10,6 +10,106 @@ import datetime
 import yaml
 
 import financial_game.database
+from financial_game.table import Identifier, String, Integer, Fixed, Enum
+from financial_game.table import Date, Table, Money, ForeignKey
+
+
+class InterestRate(Fixed):
+    """interest rate"""
+
+    def __init__(self, precision: int = 2, allow_null: bool = True):
+        super().__init__(precision, allow_null)
+
+
+class User(Table):
+    """User info"""
+
+    id = Identifier()
+    name = String(50, allow_null=False)
+    email = String(50, allow_null=False)
+    password_hash = String(64, allow_null=False)
+    sponsor_id = ForeignKey("User")
+
+
+class TypeOfBank(enum.Enum):
+    """Types of bank objects"""
+
+    BANK = 1  # bank
+
+
+class Bank(Table):
+    """bank info"""
+
+    id = Identifier()
+    name = String(50, allow_null=False)
+    type = Enum(TypeOfBank, allow_null=False)
+    url = String(2083)
+
+
+class TypeOfAccount(enum.Enum):
+    """Types of account_type objects"""
+
+    CRED = 1  # Credit Card
+    CHCK = 2  # Checking
+    SAVE = 3  # Savings
+    MONM = 4  # Money Market
+    BROK = 5  # Brokrage account
+
+
+class AccountType(Table):
+    """Bank account brand"""
+
+    id = Identifier()
+    name = String(50, allow_null=False)
+    type = Enum(TypeOfAccount, allow_null=False)
+    url = String(2083)
+    bank_id = ForeignKey(Bank, allow_null=False)
+
+
+class AccountPurpose(enum.Enum):
+    """Purposes for account objects"""
+
+    MRGC = 1  # Emergency Fund
+    SINK = 2  # Targeted / Sinking Fund
+    NYOU = 3  # self development / invest in you
+    BUDG = 4  # active budget funds
+    RTIR = 5  # retirement account
+    NVST = 6  # taxable investment
+
+
+class Account(Table):
+    """user's account"""
+
+    id = Identifier()
+    label = String(50, allow_null=False)
+    hint = String(128)
+    purpose = Enum(AccountPurpose)
+    account_type_id = ForeignKey(AccountType, allow_null=False)
+    user_id = ForeignKey(User, allow_null=False)
+
+
+class AccountStatement(Table):
+    """bank account statement"""
+
+    id = Identifier()
+    account_id = ForeignKey(Account, allow_null=False)
+    start_date = Date(allow_null=False)
+    end_date = Date(allow_null=False)
+    start_value = Money(allow_null=False)
+    end_value = Money(allow_null=False)
+    withdrawals = Money(allow_null=False)
+    deposits = Money(allow_null=False)
+    interest = Money(allow_null=False)
+    fees = Money(allow_null=False)
+    rate = InterestRate(allow_null=False)
+    mileage = Integer()
+
+
+class RelatedAccount(Table):
+    """two accounts that are related"""
+
+    account_id = ForeignKey(Account, allow_null=False)
+    related_account_id = ForeignKey(Account, allow_null=False)
 
 
 TABLES = {
@@ -59,33 +159,6 @@ TABLES = {
         "related_account_id": "INTEGER",
     },
 }
-
-
-class TypeOfBank(enum.Enum):
-    """Types of bank objects"""
-
-    BANK = 1  # bank
-
-
-class TypeOfAccount(enum.Enum):
-    """Types of account_type objects"""
-
-    CRED = 1  # Credit Card
-    CHCK = 2  # Checking
-    SAVE = 3  # Savings
-    MONM = 4  # Money Market
-    BROK = 5  # Brokrage account
-
-
-class AccountPurpose(enum.Enum):
-    """Purposes for account objects"""
-
-    MRGC = 1  # Emergency Fund
-    SINK = 2  # Targeted / Sinking Fund
-    NYOU = 3  # self development / invest in you
-    BUDG = 4  # active budget funds
-    RTIR = 5  # retirement account
-    NVST = 6  # taxable investment
 
 
 class UserApi:
