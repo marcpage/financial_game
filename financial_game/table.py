@@ -131,6 +131,8 @@ class Date(String):
 class Table:
     """Table model"""
 
+    __IGNORE_TYPES = ["function", "staticmethod"]
+
     @staticmethod
     def name(table_subclass: type) -> str:
         """Get the name of a table from the type"""
@@ -147,7 +149,11 @@ class Table:
     @staticmethod
     def __is_field(name: str, table_subclass: type) -> bool:
         maybe = not name.startswith("_") and name in table_subclass.__dict__
-        return maybe and table_subclass.__dict__[name].__class__.__name__ != "function"
+        return (
+            maybe
+            and table_subclass.__dict__[name].__class__.__name__
+            not in Table.__IGNORE_TYPES
+        )
 
     @staticmethod
     def __describe(table_subclass: type, field: str) -> str:
@@ -160,6 +166,16 @@ class Table:
     @staticmethod
     def __fields(table_subclass: type) -> [str]:
         return [f for f in dir(table_subclass) if Table.__is_field(f, table_subclass)]
+
+    @staticmethod
+    def normalize_field(table_subclass: type, field: str, value: any) -> any:
+        """Convert a field from database format to usable format"""
+        return Table.__type(table_subclass, field).normalize(value)
+
+    @staticmethod
+    def denormalize_field(table_subclass: type, field: str, value: any) -> any:
+        """convert a field from usable format to database format"""
+        return Table.__type(table_subclass, field).denormalize(value)
 
     def __init_subclass__(cls: type):
         super().__init_subclass__()
@@ -185,12 +201,13 @@ class Table:
     def normalize(self):
         """Converts database types to user-friendly types"""
         for field in Table.__fields(self.__class__):
-            typ = Table.__type(self.__class__, field)
-            self.__dict__[field] = typ.normalize(self.__dict__.get(field, None))
+            denormalized = self.__dict__.get(field, None)
+            normalized = Table.normalize_field(self.__class__, field, denormalized)
+            self.__dict__[field] = normalized
 
     def denormalize(self) -> dict:
         """Converts usable types to database types"""
         return {
-            f: Table.__type(self.__class__, f).denormalize(self.__dict__.get(f, None))
+            f: Table.denormalize_field(self.__class__, f, self.__dict__.get(f, None))
             for f in Table.__fields(self.__class__)
         }
