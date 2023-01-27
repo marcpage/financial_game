@@ -210,8 +210,63 @@ def test_create_tables():
         no_jane = db.get_one_or_none('user', email="jane.doe@apple.com", _where_="email LIKE :email")
         assert no_jane is None, no_jane
 
+def test_as_objects():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_path = os.path.join(workspace, "test.sqlite3")
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false")
+        db.create_tables(
+            user={
+                "id": "INTEGER PRIMARY KEY",
+                "name": "VARCHAR(50)",
+                "email": "VARCHAR(50)",
+                "password_hash": "VARCHAR(64)",
+                "sponsor_id": "INTEGER"
+            })
+
+        john = db.insert('user',
+            name="John",
+            email="john.appleseed@apple.com",
+            password_hash="3bce676cf7e5489dd539b077eb38888a1c9d42b23f88bc5c1f2af863f14ab23c",
+            sponsor_id=None,
+            _as_object_=False)
+        assert isinstance(john, dict)
+        john = db.get_one_or_none('user', email="john.appleseed@apple.com", _as_object_=False)
+        assert isinstance(john, dict)
+        people = db.get_all('user', _as_objects_=False)
+        assert len(people) == 1
+        assert isinstance(people[0], dict)
+
+
+def test_as_objects_default_off():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_path = os.path.join(workspace, "test.sqlite3")
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false", default_return_objects=False)
+        db.create_tables(
+            user={
+                "id": "INTEGER PRIMARY KEY",
+                "name": "VARCHAR(50)",
+                "email": "VARCHAR(50)",
+                "password_hash": "VARCHAR(64)",
+                "sponsor_id": "INTEGER"
+            })
+
+        john = db.insert('user',
+            name="John",
+            email="john.appleseed@apple.com",
+            password_hash="3bce676cf7e5489dd539b077eb38888a1c9d42b23f88bc5c1f2af863f14ab23c",
+            sponsor_id=None,
+            _as_object_=False)
+        assert isinstance(john, dict)
+        john = db.get_one_or_none('user', email="john.appleseed@apple.com")
+        assert isinstance(john, dict)
+        people = db.get_all('user')
+        assert len(people) == 1
+        assert isinstance(people[0], dict)
+
 
 if __name__ == "__main__":
     test_Sqlite()
     test_Threadsafe()
     test_create_tables()
+    test_as_objects()
+    test_as_objects_default_off()
