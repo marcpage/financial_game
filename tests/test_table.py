@@ -231,6 +231,44 @@ def test_enum():
     assert description['User']['eyecolor'] == 'VARCHAR(5)'
 
 
+def test_more_methods():
+    class User(Table):
+        id = Identifier()
+        name = String(50, allow_null=False)
+        email = String(50, allow_null=False)
+        password_hash = String(64, allow_null=False)
+        sponsor_id = ForeignKey("User")
+        @staticmethod
+        def hash_password(text): pass
+        @staticmethod
+        def create(email: str, name: str, password: str, sponsor_id: int = None): pass
+        @staticmethod
+        def fetch(user_id: int): pass
+        @staticmethod
+        def lookup(email: str): pass
+        @staticmethod
+        def every(): pass
+        @staticmethod
+        def total(): pass
+        def sponsored(self): pass
+        def change(self, **_to_update_): pass
+
+    description = Table.database_description(User)
+    assert 'name' in description['User'], description
+    assert 'id' in description['User'], description
+    assert 'email' in description['User'], description
+    assert 'password_hash' in description['User'], description
+    assert 'sponsor_id' in description['User'], description
+    assert 'hash_password' not in description['User'], description
+    assert 'create' not in description['User'], description
+    assert 'fetch' not in description['User'], description
+    assert 'lookup' not in description['User'], description
+    assert 'every' not in description['User'], description
+    assert 'total' not in description['User'], description
+    assert 'sponsored' not in description['User'], description
+    assert 'change' not in description['User'], description
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
@@ -243,3 +281,4 @@ if __name__ == "__main__":
     test_money()
     test_enum()
     test_foreign_key()
+    test_more_methods()
