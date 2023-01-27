@@ -40,17 +40,17 @@ class User(Table):
 
     @staticmethod
     def create(
-        email: str, name: str, password: str, sponsor_id: int = None, pw_hashed=False
+        email: str, password: str, name: str, sponsor_id: int = None, pw_hashed=False
     ):
         """create a new user entry"""
         assert password is not None
-        password_hash=password if pw_hashed else User.hash_password(password)
+        password_hash = password if pw_hashed else User.hash_password(password)
         created = User._db.insert(
             Table.name(User),
-            email=Table.denormalize_field(User, 'email', email),
-            password_hash=Table.denormalize_field(User, 'password_hash', password_hash),
-            name=Table.denormalize_field(User, 'name', name),
-            sponsor_id=Table.denormalize_field(User, 'sponsor_id', sponsor_id),
+            email=Table.denormalize_field(User, "email", email),
+            password_hash=Table.denormalize_field(User, "password_hash", password_hash),
+            name=Table.denormalize_field(User, "name", name),
+            sponsor_id=Table.denormalize_field(User, "sponsor_id", sponsor_id),
             _as_object_=False,
         )
         return User(**created)
@@ -59,7 +59,10 @@ class User(Table):
     def fetch(user_id: int):
         """Get a user by its id"""
         found = User._db.get_one_or_none(
-            Table.name(User), _where_="id = :user_id", user_id=user_id
+            Table.name(User),
+            _where_="id = :user_id",
+            user_id=user_id,
+            _as_object_=False,
         )
         return None if found is None else User(**found)
 
@@ -67,14 +70,14 @@ class User(Table):
     def lookup(email: str):
         """Get a user by email (case insensitive)"""
         found = User._db.get_one_or_none(
-            "user", _where_="email LIKE :email", email=email
+            "user", _where_="email LIKE :email", email=email, _as_object_=False
         )
         return None if found is None else User(**found)
 
     @staticmethod
     def every():
         """Get list of all users"""
-        return [User(**u) for u in User._db.get_all("user")]
+        return [User(**u) for u in User._db.get_all("user", _as_objects_=False)]
 
     @staticmethod
     def total():
@@ -86,7 +89,7 @@ class User(Table):
     def sponsored(self):
         """Get the people this person has sponsored"""
         found = User._db.get_all(
-            "user", _where_="sponsor_id = :user_id", user_id=self.id
+            "user", _where_="sponsor_id = :user_id", user_id=self.id, _as_objects_=False
         )
         return [User(**u) for u in found]
 
@@ -100,14 +103,18 @@ class User(Table):
             del _to_update_["password"]
 
         for field in _to_update_:
-            _to_update_[field] = Table.denormalize_field(User, field, _to_update_[field])
+            _to_update_[field] = Table.denormalize_field(
+                User, field, _to_update_[field]
+            )
 
         User._db.change(
             "user", "user_id", _where_="id = :user_id", user_id=self.id, **_to_update_
         )
 
         for field in _to_update_:
-            self.__dict__[field] = Table.normalize(User, field, _to_update_[field])
+            self.__dict__[field] = Table.normalize_field(
+                User, field, _to_update_[field]
+            )
 
 
 class TypeOfBank(enum.Enum):

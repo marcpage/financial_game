@@ -362,14 +362,14 @@ def test_user_class():
         User.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
 
         assert User.total() == 2, f"users = {db.user.total()}"
-        db.close()
+        User._db.close()
 
-        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+        User._db = financial_game.database.Connection.connect(db_url)
 
         john = User.lookup("john.appleseed@apple.com")
         john_id = john.id
         assert User.total() == 2, "users = {User.total()}"
-        assert john.name == "John"
+        assert john.name == "John", john
         assert financial_game.model.Database.password_matches(john, "Setec astronomy")
         assert not financial_game.model.Database.password_matches(john, "setec astronomy")
         assert not financial_game.model.Database.password_matches(john, "too many secrets")
@@ -388,9 +388,9 @@ def test_user_class():
         assert len(john_sponsored) == 1
         assert john_sponsored[0].id == jane.id
 
-        db.close()
+        User._db.close()
 
-        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+        User._db = financial_game.database.Connection.connect(db_url)
 
         john = User.fetch(john_id)
         assert User.total() == 2, "users = {User.total()}"
@@ -405,9 +405,9 @@ def test_user_class():
         john_sponsored = john.sponsored()
         assert len(john_sponsored) == 1
         assert john_sponsored[0].id == jane.id
-        db.close()
+        User._db.close()
 
-        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+        User._db = financial_game.database.Connection.connect(db_url)
 
         users = User.every()
         assert User.total() == 2, "users = {User.total()}"
@@ -416,7 +416,7 @@ def test_user_class():
         assert 'John' in user_names
         assert 'Jane' in user_names
 
-        db.close()
+        User._db.close()
 
 
 if __name__ == "__main__":
