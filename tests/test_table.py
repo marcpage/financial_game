@@ -2,9 +2,10 @@
 
 
 import datetime
+import enum
 
 
-from financial_game.table import Table, Integer, Identifier, String, Date, Fixed
+from financial_game.table import Table, Integer, Identifier, String, Date, Fixed, Enum
 
 
 def test_basic():
@@ -116,6 +117,23 @@ def test_methods():
     assert User.table() == "User"
 
 
+def test_enums():
+    class Colors(enum.Enum):
+        BLUE = 1
+        HAZEL = 2
+        BROWN = 3
+        GREEN = 4
+
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        eyecolor = Enum(Colors)
+
+    user = User(id=1, name="John", eyecolor="HAZEL")
+    assert user.eyecolor == Colors.HAZEL
+    assert user.denormalize()['eyecolor'] == 'HAZEL'
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
@@ -123,3 +141,4 @@ if __name__ == "__main__":
     test_date()
     test_fixed()
     test_methods()
+    test_enums()
