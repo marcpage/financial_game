@@ -21,9 +21,9 @@ def test_basic():
     assert repr(user).startswith("User(")
     assert str(user).startswith("User(")
     description = Table.database_description(User)
+    assert 'PRIMARY KEY' in description['User']['id'], description
     assert 'INTEGER' == description['User']['count'], description
     assert 'VARCHAR(50)' == description['User']['name'], description
-    assert 'PRIMARY KEY' in description['User']['id'], description
 
 
 def test_table_name():
