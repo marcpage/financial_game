@@ -212,6 +212,25 @@ def test_foreign_key():
     assert account.user_id == user.id
 
 
+def test_enum():
+    class Eyecolor(enum.Enum):
+        BROWN = 1
+        BLUE = 2
+        HAZEL = 3
+        GREEN = 4
+
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        eyecolor = Enum(Eyecolor)
+
+    user = User(id=1, name="john", eyecolor = 'HAZEL')
+    assert user.eyecolor == Eyecolor.HAZEL
+    assert user.denormalize()['eyecolor'] == 'HAZEL'
+    description = Table.database_description(User)
+    assert description['User']['eyecolor'] == 'VARCHAR(5)'
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
@@ -222,3 +241,5 @@ if __name__ == "__main__":
     test_enums()
     test_multiple_tables()
     test_money()
+    test_enum()
+    test_foreign_key()
