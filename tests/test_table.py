@@ -90,9 +90,23 @@ def test_fixed():
     assert for_db['rate'] == 367
 
 
+def test_methods():
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        title = String(8)
+
+        def address(self):
+            return f"{self.title} {self.name}"
+
+    user = User(id=1, name="John", title="Mr.")
+    assert user.address() == "Mr. John"
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
     test_normalize()
     test_date()
     test_fixed()
+    test_methods()

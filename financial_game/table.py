@@ -97,8 +97,9 @@ class Table:
         return Table.tables[table_class_name]
 
     @staticmethod
-    def __is_field(name: str) -> bool:
-        return not name.startswith("_") and name not in dir(Table)
+    def __is_field(name: str, cls: type) -> bool:
+        maybe = not name.startswith("_") and name not in dir(Table)
+        return maybe and cls.__dict__[name].__class__.__name__ != "function"
 
     @staticmethod
     def __describe(table_class_name: str, field: str) -> str:
@@ -110,9 +111,8 @@ class Table:
 
     @staticmethod
     def __fields(table_class_name: str) -> [str]:
-        return [
-            f for f in dir(Table.__table_class(table_class_name)) if Table.__is_field(f)
-        ]
+        cls = Table.__table_class(table_class_name)
+        return [f for f in dir(cls) if Table.__is_field(f, cls)]
 
     @staticmethod
     def __table_name(table_class_name: str) -> str:
@@ -121,7 +121,7 @@ class Table:
 
     def __init_subclass__(cls: type):
         super().__init_subclass__()
-        fields = [f for f in dir(cls) if Table.__is_field(f)]
+        fields = [f for f in dir(cls) if Table.__is_field(f, cls)]
         assert fields, f"No fields in {cls.__name__}"
         Table.tables[cls.__name__] = cls
 
