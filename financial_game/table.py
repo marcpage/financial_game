@@ -26,6 +26,21 @@ class Integer(DatabaseType):
         return "INTEGER"
 
 
+class Fixed(Integer):
+    """Fixed precision number"""
+
+    def __init__(self, precision: int):
+        self.__precision = precision
+
+    def normalize(self, value):
+        """convert value (100) to usable type (10.00)"""
+        return float(value) / pow(10, self.__precision)
+
+    def denormalize(self, value):
+        """convert usable type (10.00) to database value (100)"""
+        return int(value * pow(10, self.__precision))
+
+
 class Identifier(DatabaseType):
     """key"""
 

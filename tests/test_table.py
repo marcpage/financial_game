@@ -4,7 +4,7 @@
 import datetime
 
 
-from financial_game.table import Table, Integer, Identifier, String, Date
+from financial_game.table import Table, Integer, Identifier, String, Date, Fixed
 
 
 def test_basic():
@@ -74,8 +74,25 @@ def test_date():
     assert user.denormalize()['birthday'] == "1973-06-30 00:00:00.000"
 
 
+def test_fixed():
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        balance = Fixed(2)
+        rate = Fixed(2)
+    user = User(name="John", balance=13544, rate=367)
+    assert user.id is None
+    assert user.name == "John"
+    assert abs(user.balance - 135.44) < 0.001
+    assert abs(user.rate - 3.67) < 0.001
+    for_db = user.denormalize()
+    assert for_db['balance'] == 13544
+    assert for_db['rate'] == 367
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
     test_normalize()
     test_date()
+    test_fixed()
