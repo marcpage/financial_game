@@ -116,7 +116,7 @@ class Connection:
     ACCPEPTED_SCHEMES = ["sqlite"]
 
     @staticmethod
-    def connect(url: str):
+    def connect(url: str, default_return_objects=True):
         """Connect to a database
         url - sqlite://<path>?threadsafe=true
         """
@@ -132,13 +132,14 @@ class Connection:
             else:
                 database = Threadsafe(parts.path, Sqlite)
 
-        return Connection(database)
+        return Connection(database, default_return_objects)
 
-    def __init__(self, database):
+    def __init__(self, database, default_return_objects=True):
         """Create the connection
         database - an instance of Sqlite or equivalent
         """
         self.__db = database
+        self.default_return_objects = default_return_objects
 
     @staticmethod
     def __convert(description: [str], row: list, as_object: bool):
@@ -158,15 +159,15 @@ class Connection:
         """Return the first match or None if no matches
         _as_object_ - (True) If True return objects, False return dictionaries
         """
-        as_object = _replacements_.get("_as_object_", True)
+        as_object = _replacements_.get("_as_object_", self.default_return_objects)
         results = self.__db.execute(_sql_command_, _replacements_, fetch_all=False)
         return Connection.__convert(results[1], results[2], as_object)
 
     def fetch_all(self, _sql_command_: str, **_replacements_) -> [any]:
         """Return all results from the query
-        _as_object_ - (True) If True return objects, False return dictionaries
+        _as_objects_ - (True) If True return objects, False return dictionaries
         """
-        as_objects = _replacements_.get("_as_object_", True)
+        as_objects = _replacements_.get("_as_objects_", self.default_return_objects)
         results = self.__db.execute(_sql_command_, _replacements_, fetch_all=True)
         return [Connection.__convert(results[1], r, as_objects) for r in results[2]]
 
@@ -205,7 +206,7 @@ class Connection:
         _commit_ - (True) should a commit be done after the operation
         """
         fields = ["_as_object_", "_commit_", "_id_name_"]
-        as_object = _data_.get("_as_object_", True)
+        as_object = _data_.get("_as_object_", self.default_return_objects)
         commit = _data_.get("_commit_", True)
         id_name = _data_.get("_id_name_", "id")
         columns = sorted(c for c in _data_ if c not in fields)
@@ -257,7 +258,6 @@ class Connection:
         _replacements_ - :name in where will be replaced with name=value
         _as_object_ - (True) If True return an object, False return a dictionary
         """
-        # as_object = _replacements_.get("_as_object_", True)  # passed through _replacements_
         where = _replacements_.get("_where_", None)
         where_string = "" if not where else f" WHERE {where}"
         column_string = (
@@ -276,7 +276,6 @@ class Connection:
         _replacements_ - :name in where will be replaced with name=value
         _as_objects_ - (True) If True return objects, False return dictionaries
         """
-        as_objects = _replacements_.get("_as_objects_", True)
         where = _replacements_.get("_where_", None)
         column_string = (
             "*" if len(_columns_) == 0 else ", ".join(f"{c}" for c in _columns_)
@@ -285,7 +284,6 @@ class Connection:
         return self.fetch_all(
             f"""SELECT {column_string} FROM {_table_name_}{where_string};""",
             **_replacements_,
-            as_objects=as_objects,
         )
         # group_by:list=None, order_clause=None
         # order_ascending=True, limit=None, offset=None
