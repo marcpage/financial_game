@@ -103,6 +103,19 @@ def test_methods():
     assert user.address() == "Mr. John"
 
 
+def test_methods():
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        title = String(8)
+
+        @staticmethod
+        def table():
+            return f"User"
+
+    assert User.table() == "User"
+
+
 if __name__ == "__main__":
     test_basic()
     test_table_name()
