@@ -30,6 +30,19 @@ class User(Table):
     password_hash = String(64, allow_null=False)
     sponsor_id = ForeignKey("User")
 
+    @staticmethod
+    def create(email:str, name:str, password:str, sponsor_id:int=None, pw_hashed=False):
+        assert password is not None
+        return self.__db.insert(
+            "user",
+            email=email,
+            password_hash=password
+            if password_is_hashed
+            else Database.hash_password(password),
+            name=name,
+            sponsor_id=sponsor_id,
+        )
+
 
 class TypeOfBank(enum.Enum):
     """Types of bank objects"""
