@@ -4,7 +4,9 @@ import tempfile
 import os
 
 import financial_game.model
-from financial_game.model import TypeOfAccount, TypeOfBank
+from financial_game.model import TypeOfAccount, TypeOfBank, User
+from financial_game.table import Table
+import financial_game.database
 
 
 TEST_YAML_PATH = os.path.join(os.path.split(__file__)[0], "model.yaml")
@@ -349,9 +351,78 @@ def test_serialize():
         assert chase_cc.bank_id == chase.id
 
 
+def test_user_class():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_url = "sqlite:///" + workspace + "test.sqlite3"
+        User._db = financial_game.database.Connection.connect(db_url)
+        User._db.create_tables(**Table.database_description(User))
+
+        john = User.create("john.appleseed@apple.com", "Setec astronomy", "John", None)
+        assert john.id is not None
+        User.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+
+        assert User.total() == 2, f"users = {db.user.total()}"
+        db.close()
+
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        john = User.lookup("john.appleseed@apple.com")
+        john_id = john.id
+        assert User.total() == 2, "users = {User.total()}"
+        assert john.name == "John"
+        assert financial_game.model.Database.password_matches(john, "Setec astronomy")
+        assert not financial_game.model.Database.password_matches(john, "setec astronomy")
+        assert not financial_game.model.Database.password_matches(john, "too many secrets")
+        john.change(password_hash=financial_game.model.Database.hash_password("setec astronomy"))
+
+        jane = User.lookup("jane.doe@apple.com")
+        jane_id = jane.id
+        assert jane.name == "Jane"
+        assert jane.sponsor_id == john.id, f"Jane sponsor = {jane.sponsor_id} john = {john.id}"
+        assert financial_game.model.Database.password_matches(jane, "too many secrets")
+        assert not financial_game.model.Database.password_matches(jane, "Setec astronomy")
+        assert not financial_game.model.Database.password_matches(jane, "too many Secrets")
+        assert jane.sponsor_id == john.id
+        assert len(jane.sponsored()) == 0
+        john_sponsored = john.sponsored()
+        assert len(john_sponsored) == 1
+        assert john_sponsored[0].id == jane.id
+
+        db.close()
+
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        john = User.fetch(john_id)
+        assert User.total() == 2, "users = {User.total()}"
+        assert john.name == "John"
+        assert financial_game.model.Database.password_matches(john, "setec astronomy")
+        assert not financial_game.model.Database.password_matches(john, "Setec astronomy")
+
+        jane = User.fetch(jane_id)
+        assert jane.name == "Jane"
+        assert jane.sponsor_id == john.id
+        assert len(jane.sponsored()) == 0
+        john_sponsored = john.sponsored()
+        assert len(john_sponsored) == 1
+        assert john_sponsored[0].id == jane.id
+        db.close()
+
+        db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
+
+        users = User.every()
+        assert User.total() == 2, "users = {User.total()}"
+        assert len(users) == 2
+        user_names = [u.name for u in users]
+        assert 'John' in user_names
+        assert 'Jane' in user_names
+
+        db.close()
+
+
 if __name__ == "__main__":
     test_user()
     test_bank()
     test_account_type()
     test_serialize()
+    test_user_class()
 

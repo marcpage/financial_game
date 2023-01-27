@@ -24,6 +24,7 @@ class InterestRate(Fixed):
 class User(Table):
     """User info"""
 
+    _db = None
     id = Identifier()
     name = String(50, allow_null=False)
     email = String(50, allow_null=False)
@@ -43,13 +44,70 @@ class User(Table):
     ):
         """create a new user entry"""
         assert password is not None
-        return User._db.insert(
+        password_hash=password if pw_hashed else User.hash_password(password)
+        created = User._db.insert(
             Table.name(User),
-            email=email,
-            password_hash=password if pw_hashed else User.hash_password(password),
-            name=name,
-            sponsor_id=sponsor_id,
+            email=Table.denormalize_field(User, 'email', email),
+            password_hash=Table.denormalize_field(User, 'password_hash', password_hash),
+            name=Table.denormalize_field(User, 'name', name),
+            sponsor_id=Table.denormalize_field(User, 'sponsor_id', sponsor_id),
+            _as_object_=False,
         )
+        return User(**created)
+
+    @staticmethod
+    def fetch(user_id: int):
+        """Get a user by its id"""
+        found = User._db.get_one_or_none(
+            Table.name(User), _where_="id = :user_id", user_id=user_id
+        )
+        return None if found is None else User(**found)
+
+    @staticmethod
+    def lookup(email: str):
+        """Get a user by email (case insensitive)"""
+        found = User._db.get_one_or_none(
+            "user", _where_="email LIKE :email", email=email
+        )
+        return None if found is None else User(**found)
+
+    @staticmethod
+    def every():
+        """Get list of all users"""
+        return [User(**u) for u in User._db.get_all("user")]
+
+    @staticmethod
+    def total():
+        """Count total users"""
+        return User._db.get_one_or_none("user", "COUNT(*)", _as_object_=False)[
+            "COUNT(*)"
+        ]
+
+    def sponsored(self):
+        """Get the people this person has sponsored"""
+        found = User._db.get_all(
+            "user", _where_="sponsor_id = :user_id", user_id=self.id
+        )
+        return [User(**u) for u in found]
+
+    def change(self, **_to_update_):
+        """Change information about the user"""
+        assert "id" not in _to_update_
+        password = _to_update_.get("password", None)
+
+        if password is not None:
+            _to_update_["password_hash"] = User.hash_password(password)
+            del _to_update_["password"]
+
+        for field in _to_update_:
+            _to_update_[field] = Table.denormalize_field(User, field, _to_update_[field])
+
+        User._db.change(
+            "user", "user_id", _where_="id = :user_id", user_id=self.id, **_to_update_
+        )
+
+        for field in _to_update_:
+            self.__dict__[field] = Table.normalize(User, field, _to_update_[field])
 
 
 class TypeOfBank(enum.Enum):
