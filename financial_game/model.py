@@ -31,14 +31,22 @@ class User(Table):
     sponsor_id = ForeignKey("User")
 
     @staticmethod
-    def create(email:str, name:str, password:str, sponsor_id:int=None, pw_hashed=False):
+    def hash_password(text):
+        """hash utf-8 text"""
+        hasher = hashlib.new("sha256")
+        hasher.update(text.encode("utf-8"))
+        return hasher.hexdigest()
+
+    @staticmethod
+    def create(
+        email: str, name: str, password: str, sponsor_id: int = None, pw_hashed=False
+    ):
+        """create a new user entry"""
         assert password is not None
-        return self.__db.insert(
-            "user",
+        return User._db.insert(
+            Table.name(User),
             email=email,
-            password_hash=password
-            if password_is_hashed
-            else Database.hash_password(password),
+            password_hash=password if pw_hashed else User.hash_password(password),
             name=name,
             sponsor_id=sponsor_id,
         )
