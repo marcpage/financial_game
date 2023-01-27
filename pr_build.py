@@ -14,7 +14,7 @@ import shutil
 import time
 
 
-MINIMUM_TEST_COVERAGE = 93  # bring back up to 100%
+MINIMUM_TEST_COVERAGE = 94  # bring back up to 100%
 COVERAGE_FLAGS = (
     "--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
 )

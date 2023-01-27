@@ -149,7 +149,11 @@ class Table:
     @staticmethod
     def __is_field(name: str, table_subclass: type) -> bool:
         maybe = not name.startswith("_") and name in table_subclass.__dict__
-        return maybe and table_subclass.__dict__[name].__class__.__name__ not in Table.__IGNORE_TYPES
+        return (
+            maybe
+            and table_subclass.__dict__[name].__class__.__name__
+            not in Table.__IGNORE_TYPES
+        )
 
     @staticmethod
     def __describe(table_subclass: type, field: str) -> str:
@@ -164,11 +168,13 @@ class Table:
         return [f for f in dir(table_subclass) if Table.__is_field(f, table_subclass)]
 
     @staticmethod
-    def normalize_field(table_subclass:type, field:str, value:any) -> any:
+    def normalize_field(table_subclass: type, field: str, value: any) -> any:
+        """Convert a field from database format to usable format"""
         return Table.__type(table_subclass, field).normalize(value)
 
     @staticmethod
-    def denormalize_field(table_subclass:type, field:str, value:any) -> any:
+    def denormalize_field(table_subclass: type, field: str, value: any) -> any:
+        """convert a field from usable format to database format"""
         return Table.__type(table_subclass, field).denormalize(value)
 
     def __init_subclass__(cls: type):
