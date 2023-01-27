@@ -66,7 +66,7 @@ class Identifier(DatabaseType):
         super().__init__(allow_null=False)
 
     def __str__(self):
-        return "INTEGER PRIMARY KEY{self.null_clause()}"
+        return f"INTEGER PRIMARY KEY{self.null_clause()}"
 
 
 class ForeignKey(Integer):
@@ -132,7 +132,7 @@ class Table:
     """Table model"""
 
     @staticmethod
-    def table_name(table_subclass: type) -> str:
+    def name(table_subclass: type) -> str:
         """Get the name of a table from the type"""
         return table_subclass.__dict__.get("__table__", table_subclass.__name__)
 
@@ -140,13 +140,13 @@ class Table:
     def database_description(*tables):
         """Get a description that can be passed to database"""
         return {
-            Table.table_name(t): {f: Table.__describe(t, f) for f in Table.__fields(t)}
+            Table.name(t): {f: Table.__describe(t, f) for f in Table.__fields(t)}
             for t in tables
         }
 
     @staticmethod
     def __is_field(name: str, table_subclass: type) -> bool:
-        maybe = not name.startswith("_") and name not in dir(Table)
+        maybe = not name.startswith("_") and name in table_subclass.__dict__
         return maybe and table_subclass.__dict__[name].__class__.__name__ != "function"
 
     @staticmethod
@@ -174,10 +174,9 @@ class Table:
         return f"{self.__class__.__name__}({parameters})"
 
     def __str__(self):
-        table_name = Table.table_name(self.__class__)
         fields = Table.__fields(self.__class__)
         parameters = ", ".join(f"{f}={str(self.__dict__[f])}" for f in fields)
-        return f"{table_name}({parameters})"
+        return f"{Table.name(self.__class__)}({parameters})"
 
     def __init__(self, **kwargs):
         self.__dict__ = kwargs
