@@ -232,7 +232,7 @@ class Statement(Table):
     end_value = Money(allow_null=False)
     withdrawals = Money(allow_null=False)
     deposits = Money(allow_null=False)
-    interest = Money(allow_null=False)
+    interest = Money(allow_null=False)  # positive = earning interest
     fees = Money(allow_null=False)
     rate = InterestRate(allow_null=False)
     mileage = Integer()
