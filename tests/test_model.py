@@ -5,7 +5,8 @@ import os
 from datetime import date
 
 import financial_game.model
-from financial_game.model import TypeOfAccount, TypeOfBank, User, Bank, AccountType, Account, AccountPurpose, Statement
+from financial_game.model_user import User, Account, Statement, AccountPurpose
+from financial_game.model_bank import Bank, TypeOfBank, AccountType, TypeOfAccount
 from financial_game.table import Table
 import financial_game.database
 
@@ -440,12 +441,21 @@ def test_account_class():
         assert jane_savings.user().id == jane.id
         assert jane_savings.account_type().id == chase_savings.id
 
+        assert len(jane.accounts()) == 3
+        assert len(john.accounts()) == 2
+
         jane_savings.change(label="emergency fund")
         assert jane_savings.label == "emergency fund"
 
         Bank._db.close()
         Bank._db = financial_game.database.Connection.connect(db_url, False)
         AccountType._db, Account._db, User._db = (Bank._db,)*3
+
+        john = User.fetch(john.id)
+        jane = User.fetch(jane.id)
+
+        assert len(jane.accounts()) == 3
+        assert len(john.accounts()) == 2
 
         john_cc = Account.fetch(john_cc.id)
         assert john_cc.id is not None
