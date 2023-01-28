@@ -17,7 +17,7 @@ ARGS = types.SimpleNamespace(secret='gobble de gook')
 def test_root():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        app = financial_game.webserver.create_app(db, ARGS)
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         response = client.get("/")
@@ -28,7 +28,7 @@ def test_root():
 def test_login_fail():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        app = financial_game.webserver.create_app(db, ARGS)
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         response = client.post("/login", data={
@@ -42,8 +42,8 @@ def test_login_fail():
 def test_login_success():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        db.user.create("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
-        app = financial_game.webserver.create_app(db, ARGS)
+        financial_game.model.User.create("john.appleseed@apple.com", "Setec astronomy", "John")
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         response = client.post("/login", data={
@@ -60,8 +60,8 @@ def test_bad_session_password():
 
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        db.user.create("john.appleseed@apple.com", "Setec astronomy", "John", sponsor_id=None)
-        app = financial_game.webserver.create_app(db, ARGS)
+        financial_game.model.User.create("john.appleseed@apple.com", "Setec astronomy", "John")
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         user = types.SimpleNamespace(id=1, password_hash=hashlib.sha256("password".encode()).hexdigest())
@@ -77,7 +77,7 @@ def test_bad_session_password():
 def test_404():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        app = financial_game.webserver.create_app(db, ARGS)
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         response = client.get("/not_found")
@@ -88,7 +88,7 @@ def test_404():
 def test_logout():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        app = financial_game.webserver.create_app(db, ARGS)
+        app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
         response = client.get("/logout", follow_redirects=True)

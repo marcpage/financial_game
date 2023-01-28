@@ -124,8 +124,13 @@ def main():
     """main entrypoint"""
     args = parse_command_line()
     database = financial_game.model.Database(args.database, serialized=args.reset)
-    app = financial_game.webserver.create_app(database, args)
-    app.run(host="0.0.0.0", debug=args.debug, port=args.port)
+    app = financial_game.webserver.create_app(args)
+
+    try:
+        app.run(host="0.0.0.0", debug=args.debug, port=args.port)
+
+    except KeyboardInterrupt:
+        database.close()
 
 
 if __name__ == "__main__":

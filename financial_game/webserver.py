@@ -9,13 +9,12 @@ import flask
 import financial_game.template
 import financial_game.model
 import financial_game.sessionkey
-from financial_game.model import Database
 
 
 COOKIE = "user-id"  # name of the cookie that contains the session key
 
 
-def get_user(request, args, database):
+def get_user(request, args):
     """Determines the user (or None) that is requesting the page"""
     if COOKIE in request.cookies:
         user_id, password_hash = financial_game.sessionkey.parse(
@@ -23,7 +22,7 @@ def get_user(request, args, database):
             request.headers,
             args.secret,
         )
-        user = database.user.get(user_id)
+        user = financial_game.model.User.fetch(user_id)
 
         if user is not None and user.password_hash == password_hash:
             return user
@@ -31,7 +30,7 @@ def get_user(request, args, database):
     return None
 
 
-def create_app(database, args):
+def create_app(args):
     """create the flask app"""
     app = flask.Flask(__name__)
 
@@ -40,7 +39,7 @@ def create_app(database, args):
     @app.route("/")
     def home(message=None):
         """default location for the server, home"""
-        user = get_user(flask.request, args, database)
+        user = get_user(flask.request, args)
 
         if user is None:
             contents = financial_game.template.render(
@@ -70,9 +69,9 @@ def create_app(database, args):
 
     @app.route("/login", methods=["POST"])
     def login():
-        user = database.user.find(flask.request.form["email"])
+        user = financial_game.model.User.lookup(flask.request.form["email"])
 
-        if user and Database.password_matches(user, flask.request.form["password"]):
+        if user and user.password_matches(flask.request.form["password"]):
             response = flask.make_response(flask.redirect(flask.url_for("home")))
             session_key = financial_game.sessionkey.create(
                 user, flask.request.headers, args.secret
