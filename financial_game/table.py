@@ -195,8 +195,15 @@ class Table:
         return f"{Table.name(self.__class__)}({parameters})"
 
     def __init__(self, **kwargs):
+        do_normalize = kwargs.get("_normalize_", True)
+
+        if "_normalize_" in kwargs:
+            del kwargs["_normalize_"]
+
         self.__dict__ = kwargs
-        self.normalize()
+
+        if do_normalize:
+            self.normalize()
 
     def normalize(self):
         """Converts database types to user-friendly types"""
