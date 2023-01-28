@@ -19,19 +19,26 @@ def test_serialize():
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
 
         john = User.create("john.appleseed@apple.com", "Setec astronomy", "John", None)
-        assert john.id is not None
-        User.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
+        jane = User.create("Jane.Doe@apple.com", "too many secrets", "Jane", john.id)
         boa = Bank.create("Bank of America", "https://www.bankofamerica.com/")
         boa_cc = AccountType.create(boa.id, "Customized Cash Rewards", TypeOfAccount.CRED)
         boa_check = AccountType.create(boa.id, "Advantage Banking", TypeOfAccount.CHCK, "https://www.bankofamerica.com/checking")
         chase = Bank.create("Chase", "https://www.chase.com/")
         chase_cc = AccountType.create(chase.id, "Amazon Rewards", TypeOfAccount.CRED)
         chase_savings = AccountType.create(chase.id, "Chase Savings", TypeOfAccount.SAVE)
+        john_chase_cc = Account.create(john, chase_cc, "daily", "password")
+        john_boa_cc = Account.create(john, boa_cc, "automated purchases", "usual")
+        john_checking = Account.create(john, boa_check, "budget", "usual", AccountPurpose.BUDG)
+        john_savings = Account.create(john, chase_savings, "emergency only", "on the door", AccountPurpose.MRGC)
+        jane_chase_cc = Account.create(jane, chase_cc, "online", "password")
+        jane_boa_cc = Account.create(jane, boa_cc, "backup", "goofy ball")
+        jane_checking = Account.create(jane, boa_check, "budget", "refresh")
+        jane_savings = Account.create(jane, chase_savings, "emergency fund", "something")
+        john_checking_june = Statement.create(account=john_checking, start_date=date(2022, 6, 1), end_date=date(2022, 6, 30), start_value=3.14, end_value=13.37, deposits=12.95, withdrawals=2.72, fees=0.00, interest=0.00, rate=0.50)
+        john_checking_may = Statement.create(account=john_checking, start_date=date(2022, 5, 1), end_date=date(2022, 5, 31), start_value=0.00, end_value=3.14, deposits=12.95, withdrawals=9.20, fees=0.81, interest=0.20, rate=0.50)
+        jane_savings_june = Statement.create(account=jane_savings, start_date=date(2022, 5, 15), end_date=date(2022, 6, 14), start_value=3.11, end_value=13.36, deposits=12.97, withdrawals=2.71, fees=0.03, interest=0.02, rate=4.32, mileage=100000)
 
-        assert User.total() == 2, "users = {User.total()}"
-        assert Bank.total() == 2
         serialized = db.serialize()
-
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3", serialized)
 
@@ -57,6 +64,61 @@ def test_serialize():
         assert "https://www.chase.com/" in [b.url for b in banks]
         boa_id = [b.id for b in banks if b.name == "Bank of America"][0]
         chase_id = [b.id for b in banks if b.name == "Chase"][0]
+
+        john_accounts = john.accounts()
+        john_checking = [a for a in john_accounts if a.label == "budget"][0]
+        assert john_checking.hint == "usual", john_checking
+        assert john_checking.purpose == AccountPurpose.BUDG
+        assert john_checking.account_type().name == "Advantage Banking"
+        assert john_checking.account_type().bank().name == "Bank of America"
+
+        john_checking_statements = john_checking.statements()
+        assert len(john_checking_statements) == 2, john_checking_statements
+
+        john_checking_june = [s for s in john_checking_statements if s.start_date==date(2022, 6, 1)][0]
+        assert john_checking_june.id is not None
+        assert john_checking_june.account().id == john_checking.id
+        assert john_checking_june.start_date == date(2022, 6, 1)
+        assert john_checking_june.end_date == date(2022, 6, 30), john_checking_june
+        assert abs(john_checking_june.start_value - 3.14) < 0.001
+        assert abs(john_checking_june.end_value - 13.37) < 0.001
+        assert abs(john_checking_june.deposits - 12.95) < 0.001
+        assert abs(john_checking_june.withdrawals - 2.72) < 0.001
+        assert abs(john_checking_june.fees) < 0.001
+        assert abs(john_checking_june.interest) < 0.001
+        assert abs(john_checking_june.rate - 0.50) < 0.001
+        assert john_checking_june.mileage is None
+
+        john_checking_may = [s for s in john_checking_statements if s.start_date==date(2022, 5, 1)][0]
+        assert john_checking_may.id is not None
+        assert john_checking_may.account().id == john_checking.id
+        assert john_checking_may.start_date == date(2022, 5, 1)
+        assert john_checking_may.end_date == date(2022, 5, 31)
+        assert abs(john_checking_may.start_value) < 0.001
+        assert abs(john_checking_may.end_value - 3.14) < 0.001
+        assert abs(john_checking_may.deposits - 12.95) < 0.001
+        assert abs(john_checking_may.withdrawals - 9.20) < 0.001
+        assert abs(john_checking_may.fees - 0.81) < 0.001
+        assert abs(john_checking_may.interest - 0.20) < 0.001
+        assert abs(john_checking_may.rate - 0.50) < 0.001
+        assert john_checking_may.mileage is None
+
+        jane_savings_statements = jane_savings.statements()
+        assert len(jane_savings_statements) == 1
+
+        jane_savings_june = jane_savings_statements[0]
+        assert jane_savings_june.id is not None
+        assert jane_savings_june.account().id == jane_savings.id
+        assert jane_savings_june.start_date == date(2022, 5, 15)
+        assert jane_savings_june.end_date == date(2022, 6, 14)
+        assert abs(jane_savings_june.start_value - 3.11) < 0.001
+        assert abs(jane_savings_june.end_value - 13.36) < 0.001
+        assert abs(jane_savings_june.deposits - 12.97) < 0.001
+        assert abs(jane_savings_june.withdrawals - 2.71) < 0.001
+        assert abs(jane_savings_june.fees - 0.03) < 0.001
+        assert abs(jane_savings_june.interest - 0.02) < 0.001
+        assert abs(jane_savings_june.rate - 4.32) < 0.001
+        assert jane_savings_june.mileage == 100000
 
         db.close()
         db = financial_game.model.Database("sqlite:///" + workspace + "test2.sqlite3")
@@ -575,9 +637,9 @@ def test_statement_class():
         assert len(john_cc_statements) == 1
         assert set(s.id for s in john_cc_statements) == {john_cc_june.id}
 
-        jane_savings_statments = jane_savings.statements()
-        assert len(jane_savings_statments) == 1
-        assert set(s.id for s in jane_savings_statments) == {jane_savings_june.id}
+        jane_savings_statements = jane_savings.statements()
+        assert len(jane_savings_statements) == 1
+        assert set(s.id for s in jane_savings_statements) == {jane_savings_june.id}
 
         Bank._db.close()
         Bank._db = financial_game.database.Connection.connect(db_url, False)
@@ -650,9 +712,9 @@ def test_statement_class():
         assert set(s.id for s in john_cc_statements) == {john_cc_june.id}
 
         jane_savings = Account.fetch(jane_savings.id)
-        jane_savings_statments = jane_savings.statements()
-        assert len(jane_savings_statments) == 1
-        assert set(s.id for s in jane_savings_statments) == {jane_savings_june.id}
+        jane_savings_statements = jane_savings.statements()
+        assert len(jane_savings_statements) == 1
+        assert set(s.id for s in jane_savings_statements) == {jane_savings_june.id}
 
         jane_savings_june.change(mileage=120000)
         assert jane_savings_june.mileage == 120000

@@ -120,8 +120,8 @@ class Date(String):
         return (
             None
             if value is None
-            else datetime.datetime.strptime(value.split(" ")[0], "%Y-%m-%d")
-        ).date()
+            else datetime.datetime.strptime(value.split(" ")[0], "%Y-%m-%d").date()
+        )
 
     def denormalize(self, value):
         """convert usable type to database value (YYYY-MM-DD HH:MM:SS.SSS)"""
