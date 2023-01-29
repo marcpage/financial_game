@@ -9,6 +9,31 @@ import threading
 import queue
 import types
 import urllib.parse
+import enum
+
+
+class JoinType(enum.Enum):
+    """Types of join statements"""
+
+    INNER = 1
+    LEFT = 2
+    RIGHT = 3
+    FULL = 4
+
+
+class Join:
+    """Represents a join statement"""
+
+    def __init__(self, table: str, criteria: dict, join_type=JoinType.INNER):
+        self.table = table
+        self.criteria = criteria
+        self.method = join_type.name
+
+    def __str__(self):
+        return f" {self.method} JOIN {self.table} ON {self.criteria}"
+
+    def __getitem__(self, item):
+        return [self][item]
 
 
 class Sqlite:
@@ -254,17 +279,20 @@ class Connection:
         """Get the first result or None if there are no results
         _table_name_ - The table to query
         _where_ - The WHERE clause
+        _join_ - A Join object or list of Join objects
         _columns_ - list the names of any columns you want returned or none for all columns
         _replacements_ - :name in where will be replaced with name=value
         _as_object_ - (True) If True return an object, False return a dictionary
         """
         where = _replacements_.get("_where_", None)
         where_string = "" if not where else f" WHERE {where}"
+        join_clause = _replacements_.get("_join_", [""])
+        join_string = "".join(str(j) for j in join_clause)
         column_string = (
             "*" if len(_columns_) == 0 else ", ".join(f"{c}" for c in _columns_)
         )
         return self.fetch_one_or_none(
-            f"""SELECT {column_string} FROM {_table_name_}{where_string};""",
+            f"""SELECT {column_string} FROM {_table_name_}{join_string}{where_string};""",
             **_replacements_,
         )
 
@@ -272,6 +300,7 @@ class Connection:
         """Get all the results that match
         _table_name_ - The table to query
         _where_ - The WHERE clause
+        _join_ - A Join object or list of Join objects
         _columns_ - list the names of any columns you want returned or none for all columns
         _replacements_ - :name in where will be replaced with name=value
         _as_objects_ - (True) If True return objects, False return dictionaries
@@ -281,8 +310,10 @@ class Connection:
             "*" if len(_columns_) == 0 else ", ".join(f"{c}" for c in _columns_)
         )
         where_string = "" if where is None else f" WHERE {where}"
+        join_clause = _replacements_.get("_join_", [""])
+        join_string = "".join(str(j) for j in join_clause)
         return self.fetch_all(
-            f"""SELECT {column_string} FROM {_table_name_}{where_string};""",
+            f"""SELECT {column_string} FROM {_table_name_}{join_string}{where_string};""",
             **_replacements_,
         )
         # group_by:list=None, order_clause=None
