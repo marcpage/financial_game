@@ -20,7 +20,7 @@ class JoinType(enum.Enum):
 
 
 class Join:
-    def __init__(self, table:str, criteria:dict, join_type=JoinType.INNER):
+    def __init__(self, table: str, criteria: dict, join_type=JoinType.INNER):
         self.table = table
         self.criteria = criteria
         self.method = join_type.name
@@ -282,7 +282,7 @@ class Connection:
         """
         where = _replacements_.get("_where_", None)
         where_string = "" if not where else f" WHERE {where}"
-        join_clause = _replacements_.get("_join_", [''])
+        join_clause = _replacements_.get("_join_", [""])
         join_string = "".join(str(j) for j in join_clause)
         column_string = (
             "*" if len(_columns_) == 0 else ", ".join(f"{c}" for c in _columns_)
@@ -306,7 +306,7 @@ class Connection:
             "*" if len(_columns_) == 0 else ", ".join(f"{c}" for c in _columns_)
         )
         where_string = "" if where is None else f" WHERE {where}"
-        join_clause = _replacements_.get("_join_", [''])
+        join_clause = _replacements_.get("_join_", [""])
         join_string = "".join(str(j) for j in join_clause)
         return self.fetch_all(
             f"""SELECT {column_string} FROM {_table_name_}{join_string}{where_string};""",
