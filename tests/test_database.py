@@ -7,6 +7,8 @@ import threading
 import queue
 
 import financial_game.database
+from financial_game.database import Join
+
 
 RECORDS_TO_CREATE = 1000
 THREADS_TO_TEST = 50
@@ -264,7 +266,68 @@ def test_as_objects_default_off():
         assert isinstance(people[0], dict)
 
 
+def test_join():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_path = os.path.join(workspace, "test.sqlite3")
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false", default_return_objects=False)
+        db.create_tables(
+            bank={
+                "id": "INTEGER PRIMARY KEY",
+                "name": "VARCHAR(50)",
+            },
+            account_type={
+                'id': "INTEGER PRIMARY KEY",
+                "name": "VARCHAR(50)",
+                "bank_id": "INTEGER"
+            })
+
+        boa = db.insert('bank', name="Bank of America")
+        boa_cc = db.insert('account_type', name='Customized Cash Rewards', bank_id=boa['id'])
+        boa_check = db.insert('account_type', name='Advantage Banking', bank_id=boa['id'])
+
+        chase = db.insert('bank', name="Chase")
+        chase_cc = db.insert('account_type', name='Amazon Rewards', bank_id=chase['id'])
+        chase_savings = db.insert('account_type', name='Chase Savings', bank_id=chase['id'])
+
+        results = db.get_one_or_none('account_type', 'bank.id as bank_id', 'bank.name as bank_name', 'account_type.id as type_id', 'account_type.name as type_name',
+                                    _join_ = Join('bank', 'bank.id = account_type.bank_id'),
+                                    _where_="account_type.name = :type_name",
+                                    type_name="Amazon Rewards")
+        assert results['bank_id'] == chase['id']
+        assert results['bank_name'] == chase['name']
+        assert results['type_id'] == chase_cc['id']
+        assert results['type_name'] == chase_cc['name']
+
+        results = db.get_all('account_type', 'bank.id as bank_id', 'bank.name as bank_name', 'account_type.id as type_id', 'account_type.name as type_name',
+                                    _join_ = Join('bank', 'bank.id = account_type.bank_id'))
+
+        r_boa_cc = [t for t in results if t['type_name'] == "Customized Cash Rewards"][0]
+        assert r_boa_cc['bank_id'] == boa['id']
+        assert r_boa_cc['bank_name'] == boa['name']
+        assert r_boa_cc['type_id'] == boa_cc['id']
+        assert r_boa_cc['type_name'] == boa_cc['name']
+
+        r_boa_check = [t for t in results if t['type_name'] == "Advantage Banking"][0]
+        assert r_boa_check['bank_id'] == boa['id']
+        assert r_boa_check['bank_name'] == boa['name']
+        assert r_boa_check['type_id'] == boa_check['id']
+        assert r_boa_check['type_name'] == boa_check['name']
+
+        r_chase_cc = [t for t in results if t['type_name'] == "Amazon Rewards"][0]
+        assert r_chase_cc['bank_id'] == chase['id']
+        assert r_chase_cc['bank_name'] == chase['name']
+        assert r_chase_cc['type_id'] == chase_cc['id']
+        assert r_chase_cc['type_name'] == chase_cc['name']
+
+        r_chase_savings = [t for t in results if t['type_name'] == "Chase Savings"][0]
+        assert r_chase_savings['bank_id'] == chase['id']
+        assert r_chase_savings['bank_name'] == chase['name']
+        assert r_chase_savings['type_id'] == chase_savings['id']
+        assert r_chase_savings['type_name'] == chase_savings['name']
+
+
 if __name__ == "__main__":
+    test_join()
     test_Sqlite()
     test_Threadsafe()
     test_create_tables()
