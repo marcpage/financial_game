@@ -14,6 +14,7 @@ import enum
 
 class JoinType(enum.Enum):
     """Types of join statements"""
+
     INNER = 1
     LEFT = 2
     RIGHT = 3
@@ -22,6 +23,7 @@ class JoinType(enum.Enum):
 
 class Join:
     """Represents a join statement"""
+
     def __init__(self, table: str, criteria: dict, join_type=JoinType.INNER):
         self.table = table
         self.criteria = criteria
