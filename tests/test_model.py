@@ -727,7 +727,40 @@ def test_statement_class():
         assert jane_savings_june.mileage == 120000
 
 
+def test_all_account_types():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_url = "sqlite:///" + workspace + "test.sqlite3"
+        Bank._db = financial_game.database.Connection.connect(db_url, False)
+        Statement._db, AccountType._db, Account._db, User._db = (Bank._db,)*4
+        Bank._db.create_tables(**Table.database_description(Bank, AccountType))
+
+        boa = Bank.create("Bank of America", "https://www.bankofamerica.com/")
+        boa_cc = AccountType.create(boa, "Customized Cash Rewards", TypeOfAccount.CRED)
+        boa_check = AccountType.create(boa, "Advantage Banking", TypeOfAccount.CHCK, "https://www.bankofamerica.com/checking")
+        chase = Bank.create("Chase", "https://www.chase.com/")
+        chase_cc = AccountType.create(chase, "Amazon Rewards", TypeOfAccount.CRED)
+        chase_savings = AccountType.create(chase, "Chase Savings", TypeOfAccount.SAVE)
+
+        banks, account_types = AccountType.every()
+        assert boa in banks
+        assert chase in banks
+        assert len(banks) == 2
+        assert boa_cc in account_types[boa.id]
+        assert boa_check in account_types[boa.id]
+        assert chase_cc in account_types[chase.id]
+        assert chase_savings in account_types[chase.id]
+        assert len(account_types) == 2
+        assert len(account_types[boa.id]) == 2
+        assert len(account_types[chase.id]) == 2
+        assert boa_cc not in account_types[chase.id]
+        assert boa_check not in account_types[chase.id]
+        assert chase_cc not in account_types[boa.id]
+        assert chase_savings not in account_types[boa.id]
+
+
+
 if __name__ == "__main__":
+    test_all_account_types()
     test_statement_class()
     test_account_class()
     test_account_type_class()
