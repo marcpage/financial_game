@@ -43,7 +43,7 @@ def create_app(args):
 
         if user is None:
             contents = financial_game.template.render(
-                "templates/home.html.mako", message=message
+                "templates/home.html.mako", message=message, user=None
             )
 
         else:

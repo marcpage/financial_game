@@ -1,0 +1,18 @@
+            .login {
+                float: right;
+                position: fixed;
+                top: 8px;
+                right: 8px;
+                z-index: 100;
+                background-color: #DDFFDD;
+                padding: 16px;
+                border: 8px;
+                border-radius: 8px;
+            }
+            .error {
+                color: red;
+                font-weight: bold;
+            }
+            .account_type {
+                display:none
+            }
