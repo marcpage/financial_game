@@ -8,6 +8,7 @@ import flask
 
 import financial_game.template
 import financial_game.model
+from financial_game.model_bank import Bank, AccountType, TypeOfAccount
 import financial_game.sessionkey
 
 
@@ -30,6 +31,11 @@ def get_user(request, args):
     return None
 
 
+def none_if_empty(value: str) -> str:
+    """Returns None if value is empty or None, the value otherwise"""
+    return value if value else None
+
+
 def create_app(args):
     """create the flask app"""
     app = flask.Flask(__name__)
@@ -42,16 +48,17 @@ def create_app(args):
         user = get_user(flask.request, args)
 
         if user is None:
-            contents = financial_game.template.render(
-                "templates/home.html.mako", message=message, user=None
-            )
-
+            banks, account_types = [], {}
         else:
-            contents = (
-                "<html><body>"
-                + f"Welcome {user.name}"
-                + "<p><a href='/logout'>Logout</a></p></body></html>"
-            )
+            banks, account_types = AccountType.every()
+
+        contents = financial_game.template.render(
+            "templates/home.html.mako",
+            message=message,
+            user=user,
+            banks=banks,
+            account_types=account_types,
+        )
 
         return contents, 200
 
@@ -65,6 +72,38 @@ def create_app(args):
     def logout():
         response = flask.make_response(flask.redirect(flask.url_for("home")))
         response.set_cookie(COOKIE, "", expires=0)
+        return response
+
+    @app.route("/add_account", methods=["POST"])
+    def add_account():
+        user = get_user(flask.request, args)
+        bank_id = int(flask.request.form["bank"])
+        label = flask.request.form["account_label"]
+
+        print(flask.request.form)
+
+        if bank_id == -1:
+            name = flask.request.form["bank_name"]
+            url = none_if_empty(flask.request.form.get("bank_url", None))
+            bank = Bank.create(name, url)
+            account_type_id = -1
+        else:
+            bank = Bank.fetch(bank_id)
+            account_type_id = int(flask.request.form[f"bank_{bank.id}_account_type"])
+
+        if account_type_id == -1:
+            name = flask.request.form["account_type_name"]
+            category = flask.request.form["acount_type_category"]
+            url = none_if_empty(flask.request.form.get("account_type_url", None))
+            account_type = AccountType.create(bank, name, TypeOfAccount[category], url)
+        else:
+            account_type = AccountType.fetch(account_type_id)
+
+        print(f"bank = {bank}")
+        print(f"account_type = {account_type}")
+        print(f"label = {label}")
+        print(f"user = {user}")
+        response = flask.make_response(flask.redirect(flask.url_for("home")))
         return response
 
     @app.route("/login", methods=["POST"])

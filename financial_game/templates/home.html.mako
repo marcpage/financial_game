@@ -15,6 +15,7 @@
         % if user is None:
             <%include file="login.html.mako"/>
         % else:
+            <%include file="logout.html.mako"/>
             <%include file="add_account.html.mako"/>
         % endif
     </body>

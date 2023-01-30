@@ -14,5 +14,14 @@
                 font-weight: bold;
             }
             .account_type {
-                display:none
+                display:none;
+                padding: 16px;
+                border: 8px;
+                background-color: lightgray;
+            }
+            .new_account_type {
+                display:none;
+                padding: 16px;
+                border: 8px;
+                background-color: lightgray;
             }
