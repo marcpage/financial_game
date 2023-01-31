@@ -10,6 +10,7 @@ import financial_game.webserver
 import financial_game.model
 import financial_game.sessionkey
 from financial_game.model_bank import TypeOfAccount
+from financial_game.model_user import AccountPurpose
 
 
 ARGS = types.SimpleNamespace(secret='gobble de gook')
@@ -129,7 +130,7 @@ def test_add_account_no_login():
 def test_add_account():
     with tempfile.TemporaryDirectory() as workspace:
         db = financial_game.model.Database("sqlite:///" + workspace + "test.sqlite3")
-        financial_game.model.User.create("john.appleseed@apple.com", "Setec astronomy", "John")
+        user = financial_game.model.User.create("john.appleseed@apple.com", "Setec astronomy", "John")
         app = financial_game.webserver.create_app(ARGS)
         app.config.update({"TESTING": True})
         client = app.test_client()
@@ -147,6 +148,8 @@ def test_add_account():
             'bank_name': 'Bank of America',
             'bank_url': 'https://BankOfAmerica.com/',
             'account_type_name': 'Customized Cash Rewards',
+            'account_hint': 'usual',
+            'account_purpose': 'MRGC',
             'acount_type_category': 'CRED',
             'account_type_url': '',
         }, follow_redirects=True)
@@ -159,6 +162,11 @@ def test_add_account():
         assert account_types[0].name == 'Customized Cash Rewards'
         assert account_types[0].url is None
         assert account_types[0].type == TypeOfAccount.CRED
+        accounts = user.accounts()
+        assert len(accounts) == 1
+        assert accounts[0].label == 'online purchases'
+        assert accounts[0].hint == 'usual'
+        assert accounts[0].purpose == AccountPurpose.MRGC
 
         response = client.post("/add_account", data={
             'bank': banks[0].id,
@@ -174,6 +182,10 @@ def test_add_account():
         assert account_types[0].name == 'Customized Cash Rewards'
         assert account_types[0].url is None
         assert account_types[0].type == TypeOfAccount.CRED
+        accounts = user.accounts()
+        assert len(accounts) == 2
+        assert None in [a.purpose for a in accounts]
+        assert None in [a.hint for a in accounts]
 
         response = client.post("/add_account", data={
             'bank': banks[0].id,
@@ -190,6 +202,8 @@ def test_add_account():
         account_types = banks[0].account_types()
         assert len(account_types) == 2
         assert 'Customized Cash Rewards' in [t.name for t in account_types]
+        accounts = user.accounts()
+        assert len(accounts) == 3
 
 
 if __name__ == "__main__":
