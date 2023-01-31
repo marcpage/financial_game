@@ -9,6 +9,7 @@ import flask
 import financial_game.template
 import financial_game.model
 from financial_game.model_bank import Bank, AccountType, TypeOfAccount
+from financial_game.model_user import Account, AccountPurpose
 import financial_game.sessionkey
 
 
@@ -83,8 +84,9 @@ def create_app(args):
 
         bank_id = int(flask.request.form["bank"])
         label = flask.request.form["account_label"]
-
-        print(flask.request.form)
+        hint = flask.request.form.get("account_hint", None)
+        purpose = flask.request.form.get("account_purpose", None)
+        purpose = None if purpose is None else AccountPurpose[purpose]
 
         if bank_id == -1:
             name = flask.request.form["bank_name"]
@@ -103,12 +105,8 @@ def create_app(args):
         else:
             account_type = AccountType.fetch(account_type_id)
 
-        print(f"bank = {bank}")
-        print(f"account_type = {account_type}")
-        print(f"label = {label}")
-        print(f"user = {user}")
-        response = flask.make_response(flask.redirect(flask.url_for("home")))
-        return response
+        Account.create(user, account_type, label, hint, purpose)
+        return flask.make_response(flask.redirect(flask.url_for("home")))
 
     @app.route("/login", methods=["POST"])
     def login():
