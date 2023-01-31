@@ -77,6 +77,10 @@ def create_app(args):
     @app.route("/add_account", methods=["POST"])
     def add_account():
         user = get_user(flask.request, args)
+
+        if user is None:
+            return flask.make_response(flask.redirect(flask.url_for("home")))
+
         bank_id = int(flask.request.form["bank"])
         label = flask.request.form["account_label"]
 
