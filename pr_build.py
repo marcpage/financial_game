@@ -34,6 +34,7 @@ GITHUB_WORKFLOW = os.environ.get("GITHUB_WORKFLOW", "") == "CI"
 ERROR_PREFIX = "##[error]" if GITHUB_WORKFLOW else "💥💥"
 LINT_ERROR_PATTERN = re.compile(r"^(.*:.*:.*:)", re.MULTILINE)
 PIP_QUIET = "" if GITHUB_WORKFLOW else "--quiet"
+SKIP_VENV = "quick" in sys.argv
 
 
 def main():  # pylint: disable=too-many-branches,too-many-statements
@@ -43,14 +44,17 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
     #  Python venv
     #
     #####################################
-    github_log("##[group] Installing dependencies")
-    github_log(f"##[command]python3 -m venv {VENV_PATH}")
-    venv.create(VENV_PATH, symlinks=True, with_pip=True)
-    github_log(f"##[command]pip3 install {PIP_QUIET} --upgrade pip")
-    Start(f"pip install {PIP_QUIET} --upgrade pip").dump()
-    github_log(f"##[command]pip3 install {PIP_QUIET} --requirement {REQUIREMENTS_PATH}")
-    Start(f"pip install {PIP_QUIET} --requirement {REQUIREMENTS_PATH}").dump()
-    github_log("##[endgroup]")
+    if not SKIP_VENV:
+        github_log("##[group] Installing dependencies")
+        github_log(f"##[command]python3 -m venv {VENV_PATH}")
+        venv.create(VENV_PATH, symlinks=True, with_pip=True)
+        github_log(f"##[command]pip3 install {PIP_QUIET} --upgrade pip")
+        Start(f"pip install {PIP_QUIET} --upgrade pip").dump()
+        github_log(
+            f"##[command]pip3 install {PIP_QUIET} --requirement {REQUIREMENTS_PATH}"
+        )
+        Start(f"pip install {PIP_QUIET} --requirement {REQUIREMENTS_PATH}").dump()
+        github_log("##[endgroup]")
 
     #####################################
     #
