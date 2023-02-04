@@ -14,6 +14,11 @@ import shutil
 import time
 
 
+def updated(file):
+    """When was the file last updated, or 0 if does not exist"""
+    return 0 if not os.path.isfile(file) else os.path.getmtime(file)
+
+
 MINIMUM_TEST_COVERAGE = 100
 COVERAGE_FLAGS = (
     "--show-missing --skip-covered --skip-empty --omit=financial_game/__main__.py"
@@ -34,7 +39,10 @@ GITHUB_WORKFLOW = os.environ.get("GITHUB_WORKFLOW", "") == "CI"
 ERROR_PREFIX = "##[error]" if GITHUB_WORKFLOW else "💥💥"
 LINT_ERROR_PATTERN = re.compile(r"^(.*:.*:.*:)", re.MULTILINE)
 PIP_QUIET = "" if GITHUB_WORKFLOW else "--quiet"
-SKIP_VENV = "quick" in sys.argv
+VENV_TIMESTAMP_FILE = os.path.join(VENV_PATH, "updated")
+SKIP_VENV = "quick" in sys.argv or updated(VENV_TIMESTAMP_FILE) >= updated(
+    REQUIREMENTS_PATH
+)
 
 
 def main():  # pylint: disable=too-many-branches,too-many-statements
@@ -55,6 +63,14 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
         )
         Start(f"pip install {PIP_QUIET} --requirement {REQUIREMENTS_PATH}").dump()
         github_log("##[endgroup]")
+        os.makedirs(os.path.split(VENV_TIMESTAMP_FILE)[0], exist_ok=True)
+
+        with open(VENV_TIMESTAMP_FILE, "w", encoding="utf-8") as timestamp_file:
+            timestamp_file.write("")
+
+        os.utime(
+            VENV_TIMESTAMP_FILE, (time.time(), os.path.getmtime(REQUIREMENTS_PATH))
+        )
 
     #####################################
     #
