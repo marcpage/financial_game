@@ -5,7 +5,7 @@ import datetime
 import enum
 
 
-from financial_game.table import Table, Integer, Identifier, String, Date, Fixed, Enum, Money, ForeignKey
+from financial_game.table import Table, Integer, Identifier, String, Date, Fixed, IntEnum, Enum, Money, ForeignKey, IntDate
 
 
 def test_basic():
@@ -71,6 +71,19 @@ def test_date():
     assert user.name == "John"
     assert user.birthday == datetime.date(1973, 6, 30)
     assert user.denormalize()['birthday'] == "1973-06-30 00:00:00.000"
+
+
+def test_integer_date():
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        birthday = IntDate()
+    birthday_in_days = datetime.datetime(1973, 6, 30).timestamp()/24/60/60
+    user = User(name="John", birthday=birthday_in_days)
+    assert user.id is None
+    assert user.name == "John"
+    assert user.birthday == datetime.date(1973, 6, 30), f"{user.birthday} <> {datetime.date(1973, 6, 30)}"
+    assert user.denormalize()['birthday'] == int(birthday_in_days), f"{user.denormalize()['birthday']} <> {birthday_in_days}"
 
 
 def test_fixed():
@@ -231,6 +244,50 @@ def test_enum():
     assert description['User']['eyecolor'] == 'VARCHAR(5)'
 
 
+def test_init_normalize():
+    class Eyecolor(enum.Enum):
+        BROWN = 1
+        BLUE = 2
+        HAZEL = 3
+        GREEN = 4
+
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        eyecolor = Enum(Eyecolor)
+
+    user = User(id=1, name="john", eyecolor = Eyecolor.HAZEL, _normalize_=False)
+    assert user.eyecolor == Eyecolor.HAZEL
+    assert user.denormalize()['eyecolor'] == 'HAZEL'
+    description = Table.database_description(User)
+    assert description['User']['eyecolor'] == 'VARCHAR(5)'
+
+    user = User(id=1, name="john", eyecolor = 'HAZEL', _normalize_=True)
+    assert user.eyecolor == Eyecolor.HAZEL
+    assert user.denormalize()['eyecolor'] == 'HAZEL'
+    description = Table.database_description(User)
+    assert description['User']['eyecolor'] == 'VARCHAR(5)'
+
+
+def test_intenum():
+    class Eyecolor(enum.Enum):
+        BROWN = 1
+        BLUE = 2
+        HAZEL = 3
+        GREEN = 4
+
+    class User(Table):
+        id = Identifier()
+        name = String(50)
+        eyecolor = IntEnum(Eyecolor)
+
+    user = User(id=1, name="john", eyecolor = 3)
+    assert user.eyecolor == Eyecolor.HAZEL
+    assert user.denormalize()['eyecolor'] == 3
+    description = Table.database_description(User)
+    assert description['User']['eyecolor'] == 'INTEGER'
+
+
 def test_more_methods():
     class User(Table):
         id = Identifier()
@@ -282,3 +339,6 @@ if __name__ == "__main__":
     test_enum()
     test_foreign_key()
     test_more_methods()
+    test_integer_date()
+    test_intenum()
+    test_init_normalize()

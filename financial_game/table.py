@@ -97,9 +97,6 @@ class Enum(String):
         largest = max(len(e.name) for e in list(enum_type))
         super().__init__(length=largest, allow_null=allow_null)
 
-    def __str__(self):
-        return f"VARCHAR({self.length}){self.null_clause()}"
-
     def normalize(self, value):
         """convert string to enum"""
         return None if value is None else self.enum_type[value]
@@ -107,6 +104,22 @@ class Enum(String):
     def denormalize(self, value):
         """convert enum to string"""
         return None if value is None else value.name
+
+
+class IntEnum(Integer):
+    """enum"""
+
+    def __init__(self, enum_type, allow_null: bool = True):
+        self.enum_type = enum_type
+        super().__init__(allow_null=allow_null)
+
+    def normalize(self, value):
+        """convert string to enum"""
+        return None if value is None else self.enum_type(value)
+
+    def denormalize(self, value):
+        """convert enum to string"""
+        return None if value is None else value.value
 
 
 class Date(String):
@@ -126,6 +139,29 @@ class Date(String):
     def denormalize(self, value):
         """convert usable type to database value (YYYY-MM-DD HH:MM:SS.SSS)"""
         return value.strftime("%Y-%m-%d") + " 00:00:00.000"
+
+
+class IntDate(Integer):
+    """Date as days since epoch"""
+
+    ONE_DAY_IN_SECONDS = 60.0 * 60.0 * 24.0
+
+    def normalize(self, value):
+        """convert value (YYYY-MM-DD HH:MM:SS.SSS) to usable type"""
+        return (
+            None
+            if value is None
+            else datetime.datetime.fromtimestamp(
+                value * IntDate.ONE_DAY_IN_SECONDS
+            ).date()
+        )
+
+    def denormalize(self, value):
+        """convert usable type to database value (YYYY-MM-DD HH:MM:SS.SSS)"""
+        return int(
+            datetime.datetime.combine(value, datetime.datetime.min.time()).timestamp()
+            / IntDate.ONE_DAY_IN_SECONDS
+        )
 
 
 class Table:

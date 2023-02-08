@@ -212,6 +212,7 @@ def test_create_tables():
         no_jane = db.get_one_or_none('user', email="jane.doe@apple.com", _where_="email LIKE :email")
         assert no_jane is None, no_jane
 
+
 def test_as_objects():
     with tempfile.TemporaryDirectory() as workspace:
         db_path = os.path.join(workspace, "test.sqlite3")
@@ -326,6 +327,87 @@ def test_join():
         assert r_chase_savings['type_name'] == chase_savings['name']
 
 
+def test_change():
+    with tempfile.TemporaryDirectory() as workspace:
+        db_path = os.path.join(workspace, "test.sqlite3")
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false")
+        db.create_tables(
+            user={
+                "id": "INTEGER PRIMARY KEY",
+                "name": "VARCHAR(50)",
+                "email": "VARCHAR(50)",
+                "password_hash": "VARCHAR(64)",
+                "sponsor_id": "INTEGER"
+            })
+
+        john = db.insert('user',
+            name="John",
+            email="john.appleseed@apple.com",
+            password_hash="3bce676cf7e5489dd539b077eb38888a1c9d42b23f88bc5c1f2af863f14ab23c",
+            sponsor_id=None)
+        assert john.id is not None
+        assert john.name == "John"
+        assert john.email == "john.appleseed@apple.com"
+        assert john.password_hash == "3bce676cf7e5489dd539b077eb38888a1c9d42b23f88bc5c1f2af863f14ab23c"
+        assert john.sponsor_id == None
+
+        jane = db.insert('user',
+            name="Jane",
+            email="Jane.Doe@apple.com",
+            password_hash="624fa374a759deff04da9e9d99b7e7f9937d9410401c421c38ca78973b98293a",
+            sponsor_id=john.id)
+        assert jane.id is not None
+        assert jane.name == "Jane"
+        assert jane.email == "Jane.Doe@apple.com"
+        assert jane.password_hash == "624fa374a759deff04da9e9d99b7e7f9937d9410401c421c38ca78973b98293a"
+        assert jane.sponsor_id == john.id
+
+        everything = db.get_all('user')
+        assert len(everything) == 2, everything
+
+        db.close()
+
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false")
+
+        everything = db.get_all('user')
+        assert len(everything) == 2, everything
+        john = db.get_one_or_none('user', email="John.Appleseed@Apple.com", _where_="email LIKE :email")
+        assert john.id is not None
+        assert john.name == "John"
+        assert john.email == "john.appleseed@apple.com"
+        assert john.password_hash == "3bce676cf7e5489dd539b077eb38888a1c9d42b23f88bc5c1f2af863f14ab23c"
+        assert john.sponsor_id == None
+
+        jane = db.get_one_or_none('user', email="jane.doe@apple.com", _where_="email LIKE :email")
+        assert jane.id is not None
+        assert jane.name == "Jane"
+        assert jane.email == "Jane.Doe@apple.com"
+        assert jane.password_hash == "624fa374a759deff04da9e9d99b7e7f9937d9410401c421c38ca78973b98293a"
+        assert jane.sponsor_id == john.id
+
+        db.change('user', 'user_id', _where_="id = :user_id", user_id=jane.id, email="jane.doe@apple.com")
+
+        jane = db.get_one_or_none('user', email="jane.doe@apple.com", _where_="email LIKE :email")
+        assert jane.id is not None
+        assert jane.name == "Jane"
+        assert jane.email == "jane.doe@apple.com"
+        assert jane.password_hash == "624fa374a759deff04da9e9d99b7e7f9937d9410401c421c38ca78973b98293a"
+        assert jane.sponsor_id == john.id
+
+        db.close()
+
+        db = financial_game.database.Connection.connect(f"sqlite://{db_path}?threadsafe=false")
+
+        jane = db.get_one_or_none('user', email="jane.doe@apple.com", _where_="email LIKE :email")
+        assert jane.id is not None
+        assert jane.name == "Jane"
+        assert jane.email == "jane.doe@apple.com"
+        assert jane.password_hash == "624fa374a759deff04da9e9d99b7e7f9937d9410401c421c38ca78973b98293a"
+        assert jane.sponsor_id == john.id
+
+        db.close()
+
+
 if __name__ == "__main__":
     test_join()
     test_Sqlite()
@@ -333,3 +415,4 @@ if __name__ == "__main__":
     test_create_tables()
     test_as_objects()
     test_as_objects_default_off()
+    test_change()
