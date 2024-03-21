@@ -115,7 +115,9 @@ def main():  # pylint: disable=too-many-branches,too-many-statements
             f"{ERROR_PREFIX}💥💥 Please run black on this source to reformat and resubmit 💥💥 \n"
         )
     else:
-        sys.stdout.write(f"✅ black verification successful ({duration:0.3f} seconds)\n")
+        sys.stdout.write(
+            f"✅ black verification successful ({duration:0.3f} seconds)\n"
+        )
 
     #####################################
     #
