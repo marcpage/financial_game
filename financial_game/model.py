@@ -114,9 +114,11 @@ class Database:
                     account_type,
                     account["label"],
                     account.get("hint", None),
-                    None
-                    if account["purpose"] is None
-                    else AccountPurpose[account["purpose"]],
+                    (
+                        None
+                        if account["purpose"] is None
+                        else AccountPurpose[account["purpose"]]
+                    ),
                 )
                 accounts_created.append((account, created))
 

@@ -155,9 +155,11 @@ class Account(Table):
             label=label,
             hint=hint,
             purpose=purpose,
-            account_type_id=account_type.id
-            if isinstance(account_type, AccountType)
-            else account_type,
+            account_type_id=(
+                account_type.id
+                if isinstance(account_type, AccountType)
+                else account_type
+            ),
             user_id=user.id if isinstance(user, User) else user,
             _normalize_=False,
         ).denormalize()
